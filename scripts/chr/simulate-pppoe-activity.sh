@@ -118,8 +118,14 @@ simulate_random_activity() {
             
             simulate_disconnect "$user_to_disconnect"
             
-            # Remove user from active list
-            active_users=("${active_users[@]/$user_to_disconnect}")
+            # Remove user from active list using proper array manipulation
+            local temp_array=()
+            for user in "${active_users[@]}"; do
+                if [ "$user" != "$user_to_disconnect" ]; then
+                    temp_array+=("$user")
+                fi
+            done
+            active_users=("${temp_array[@]}")
         fi
         
         # Log current state

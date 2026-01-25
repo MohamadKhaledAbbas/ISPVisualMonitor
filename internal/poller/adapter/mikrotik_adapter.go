@@ -146,11 +146,13 @@ func (a *MikroTikAdapter) createClient(router *models.EnhancedRouter) (*routeros
 	var err error
 	
 	if apiCfg.UseTLS {
-		// For TLS connections, use DialTLS (note: TLS support may vary by routeros library version)
-		// The current library version may not support TLS config
+		// NOTE: The current version of gopkg.in/routeros.v2 doesn't have full TLS support
+		// For production use, consider using a newer library or implementing custom TLS dialing
+		// For now, fall back to regular connection
+		log.Printf("Warning: TLS requested for %s but library doesn't support TLS config, using regular connection", router.ManagementIP)
 		client, err = routeros.Dial(address, apiCfg.Username, apiCfg.Password)
 		if err != nil {
-			return nil, fmt.Errorf("failed to connect via TLS: %w", err)
+			return nil, fmt.Errorf("failed to connect: %w", err)
 		}
 	} else {
 		client, err = routeros.DialTimeout(address, apiCfg.Username, apiCfg.Password, timeout)
