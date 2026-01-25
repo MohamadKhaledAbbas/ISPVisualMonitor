@@ -13,23 +13,39 @@ A production-grade, multi-tenant ISP monitoring platform with Role-Based Access 
 - 📊 **Real-Time Metrics** - Interface and router metrics with time-series storage
 - 🔔 **Alert Management** - Configurable alert rules and notification system
 - 🗺️ **Self-Hosted Maps** - MapLibre GL JS with PMTiles (no external dependencies)
+- 🔄 **Multi-Role Routers** - Routers can have multiple roles (core, edge, PPPoE, NAT, etc.)
+- 🔌 **Vendor Abstraction** - Pluggable adapter pattern supporting MikroTik, Cisco, Juniper, and more
+- 📡 **Multiple Connection Methods** - API, SNMP, SSH, NETCONF with automatic fallback
+- 👥 **Session Tracking** - Monitor PPPoE, NAT, and DHCP sessions in real-time
+- 🏗️ **Router Dependencies** - Model upstream/downstream/peer relationships for impact analysis
 
 ## Architecture
 
-The system follows a modern microservices-inspired architecture:
+The system follows a modern microservices-inspired architecture with a **pluggable adapter pattern** for vendor abstraction:
 
 - **API Server (Go)** - RESTful API with JWT authentication
-- **Router Poller (Go)** - Concurrent worker pool for device polling
-- **PostgreSQL + PostGIS** - Primary database with geographic extensions
+- **Enhanced Router Poller (Go)** - Concurrent worker pool with vendor-agnostic polling
+- **Adapter Framework** - Pluggable adapters for MikroTik, Cisco, Juniper, and more
+- **PostgreSQL + PostGIS** - Primary database with geographic extensions and multi-role support
 - **Redis** - Caching and session management
 - **Nginx** - Frontend and tile serving
 - **MapLibre GL JS** - Self-hosted map visualization
+
+### Key Architectural Improvements
+
+- **Multi-Role Router Support**: Routers can have multiple roles (e.g., PPPoE server + NAT gateway)
+- **Vendor Abstraction**: Pluggable adapter pattern allows easy addition of new vendors
+- **Connection Flexibility**: Support for API, SNMP, SSH, NETCONF with automatic fallback
+- **Session Tracking**: Track PPPoE, NAT, and DHCP sessions across the network
+- **Router Dependencies**: Model and visualize router relationships for impact analysis
 
 For detailed architecture documentation, see:
 - [System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md)
 - [Multi-Tenant Design](docs/architecture/MULTI_TENANT.md)
 - [Role-Based Access Control](docs/architecture/RBAC.md)
 - [Topology-Aware Architecture](docs/architecture/TOPOLOGY_AWARE.md)
+- **NEW:** [CHR Lab Setup](docs/CHR_SETUP.md) - MikroTik test environment
+- **NEW:** [Adapter Development Guide](docs/ADAPTER_DEVELOPMENT.md) - Create custom adapters
 
 ## Quick Start
 
@@ -60,7 +76,11 @@ docker-compose up -d
 
 4. Initialize the database:
 ```bash
+# Run initial schema
 docker-compose exec postgres psql -U ispmonitor -d ispmonitor -f /docker-entrypoint-initdb.d/001_initial_schema.sql
+
+# Run enhanced schema (multi-role support)
+docker-compose exec postgres psql -U ispmonitor -d ispmonitor -f /docker-entrypoint-initdb.d/002_enhanced_router_schema.sql
 ```
 
 5. Access the application:
@@ -85,6 +105,7 @@ docker-compose up -d postgres redis
 3. Run database migrations:
 ```bash
 psql -U ispmonitor -d ispmonitor -f db/migrations/001_initial_schema.sql
+psql -U ispmonitor -d ispmonitor -f db/migrations/002_enhanced_router_schema.sql
 ```
 
 4. Configure environment:
@@ -150,8 +171,16 @@ The database schema includes:
 - **Monitoring Data** - Interface metrics, router metrics (time-series)
 - **Alert System** - Alert rules and active alerts
 - **Audit Logging** - Complete audit trail
+- **Enhanced Router Capabilities** (NEW):
+  - **Router Roles** - Multi-role support (core, edge, PPPoE, NAT, etc.)
+  - **Router Capabilities** - Connection methods (API, SNMP, SSH, NETCONF)
+  - **Router Dependencies** - Upstream/downstream/peer relationships
+  - **Session Tracking** - PPPoE sessions, NAT sessions, DHCP leases
+  - **Polling History** - Track polling attempts and results
 
-See [db/migrations/001_initial_schema.sql](db/migrations/001_initial_schema.sql) for the complete schema.
+See migration files for complete schema:
+- [Initial Schema](db/migrations/001_initial_schema.sql)
+- [Enhanced Router Schema](db/migrations/002_enhanced_router_schema.sql)
 
 ## Map Setup
 
@@ -177,16 +206,37 @@ ISPVisualMonitor/
 │   ├── database/            # Database connection
 │   ├── middleware/          # HTTP middleware
 │   └── poller/              # Router polling service
+│       ├── adapter/         # Polling adapters (NEW)
+│       │   ├── adapter.go          # Adapter interface
+│       │   ├── mikrotik_adapter.go # MikroTik RouterOS API
+│       │   ├── snmp_adapter.go     # Generic SNMP
+│       │   └── registry.go         # Adapter registry
+│       ├── poller.go               # Legacy poller
+│       └── poller_enhanced.go      # Enhanced adapter-based poller (NEW)
 ├── pkg/
 │   ├── config/              # Configuration management
 │   └── models/              # Data models
+│       ├── capabilities.go        # Router capabilities (NEW)
+│       ├── role.go                # Router roles (NEW)
+│       ├── router_enhanced.go     # Enhanced router model (NEW)
+│       ├── sessions.go            # Session tracking (NEW)
+│       └── models.go              # Base models
 ├── db/
 │   └── migrations/          # Database migration scripts
+│       ├── 001_initial_schema.sql
+│       └── 002_enhanced_router_schema.sql (NEW)
 ├── docs/
-│   └── architecture/        # Architecture documentation
+│   ├── architecture/        # Architecture documentation
+│   ├── CHR_SETUP.md         # CHR lab setup guide (NEW)
+│   └── ADAPTER_DEVELOPMENT.md  # Adapter dev guide (NEW)
+├── scripts/
+│   └── chr/                 # CHR lab scripts (NEW)
+│       ├── setup-chr-monitoring.rsc
+│       └── simulate-pppoe-activity.sh
 ├── docker/                  # Docker configuration files
 ├── Dockerfile               # Application Dockerfile
-└── docker-compose.yml       # Docker Compose configuration
+├── docker-compose.yml       # Standard deployment
+└── docker-compose.chr.yml   # CHR lab environment (NEW)
 ```
 
 ### Building
@@ -267,9 +317,17 @@ For issues and questions:
 
 ## Roadmap
 
+- [x] **Multi-Role Router Support** - Routers with multiple roles (PPPoE, NAT, etc.)
+- [x] **Vendor Abstraction Layer** - Pluggable adapter pattern for different vendors
+- [x] **MikroTik RouterOS Support** - Native API adapter for MikroTik devices
+- [x] **Session Tracking** - PPPoE, NAT, and DHCP session monitoring
+- [x] **Router Dependencies** - Model upstream/downstream relationships
+- [x] **CHR Test Lab** - Docker-based MikroTik lab for testing
 - [ ] Complete API handler implementations
 - [ ] Frontend development with React/Vue
-- [ ] SNMP polling implementation
+- [ ] Advanced SNMP polling with vendor MIBs
+- [ ] Cisco IOS/XE adapter (RESTCONF)
+- [ ] Juniper JUNOS adapter (NETCONF)
 - [ ] Advanced alerting with webhooks
 - [ ] User management UI
 - [ ] Topology auto-discovery
