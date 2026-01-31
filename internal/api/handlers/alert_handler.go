@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/utils"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/dto"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/middleware"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/repository"
@@ -30,59 +30,65 @@ func NewAlertHandler(alertService *service.AlertService, validator *validator.Va
 func (h *AlertHandler) HandleListAlerts(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
 	if !ok {
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal.WithDetails("Tenant context not found"))
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
 		return
 	}
 
 	page, pageSize := parsePagination(r)
 	opts := repository.ListOptions{
-		Offset: (page - 1) * pageSize,
-		Limit:  pageSize,
+		Page:     page,
+		PageSize: pageSize,
 	}
 
 	alerts, total, err := h.alertService.ListAlerts(r.Context(), tenantID, opts)
 	if err != nil {
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondPaginated(w, alerts, page, pageSize, total)
+	utils.RespondPaginated(w, alerts, page, pageSize, total)
 }
 
 func (h *AlertHandler) HandleAcknowledgeAlert(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	alertID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid alert ID"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid alert ID"))
 		return
 	}
 
 	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	if !ok {
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal.WithDetails("User context not found"))
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("User context not found"))
 		return
 	}
 
 	var req dto.AcknowledgeAlertRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid request body"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid request body"))
 		return
 	}
 
 	if err := h.validator.Struct(&req); err != nil {
-		api.RespondValidationError(w, err)
+		utils.RespondValidationError(w, err)
 		return
 	}
 
-	alert, err := h.alertService.AcknowledgeAlert(r.Context(), alertID, userID, &req)
+	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
+		return
+	}
+
+	err = h.alertService.AcknowledgeAlert(r.Context(), tenantID, alertID, userID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			api.RespondError(w, http.StatusNotFound, api.ErrNotFound)
+			utils.RespondError(w, http.StatusNotFound, utils.ErrNotFound)
 			return
 		}
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondJSON(w, http.StatusOK, alert)
+	utils.RespondNoContent(w)
 }

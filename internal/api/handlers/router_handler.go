@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/utils"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/dto"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/middleware"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/repository"
@@ -31,127 +31,145 @@ func NewRouterHandler(routerService *service.RouterService, validator *validator
 func (h *RouterHandler) HandleListRouters(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
 	if !ok {
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal.WithDetails("Tenant context not found"))
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
 		return
 	}
 
 	page, pageSize := parsePagination(r)
 	opts := repository.ListOptions{
-		Offset: (page - 1) * pageSize,
-		Limit:  pageSize,
+		Page:     page,
+		PageSize: pageSize,
 	}
 
 	routers, total, err := h.routerService.ListRouters(r.Context(), tenantID, opts)
 	if err != nil {
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondPaginated(w, routers, page, pageSize, total)
+	utils.RespondPaginated(w, routers, page, pageSize, total)
 }
 
 func (h *RouterHandler) HandleCreateRouter(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
 	if !ok {
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal.WithDetails("Tenant context not found"))
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
 		return
 	}
 
 	var req dto.CreateRouterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid request body"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid request body"))
 		return
 	}
 
 	if err := h.validator.Struct(&req); err != nil {
-		api.RespondValidationError(w, err)
+		utils.RespondValidationError(w, err)
 		return
 	}
 
 	router, err := h.routerService.CreateRouter(r.Context(), tenantID, &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			api.RespondError(w, http.StatusConflict, api.ErrConflict.WithDetails("Router already exists"))
+			utils.RespondError(w, http.StatusConflict, utils.ErrConflict.WithDetails("Router already exists"))
 			return
 		}
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondCreated(w, router)
+	utils.RespondCreated(w, router)
 }
 
 func (h *RouterHandler) HandleGetRouter(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
+		return
+	}
+
 	vars := mux.Vars(r)
 	routerID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid router ID"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid router ID"))
 		return
 	}
 
-	router, err := h.routerService.GetRouter(r.Context(), routerID)
+	router, err := h.routerService.GetRouter(r.Context(), tenantID, routerID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			api.RespondError(w, http.StatusNotFound, api.ErrNotFound)
+			utils.RespondError(w, http.StatusNotFound, utils.ErrNotFound)
 			return
 		}
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondJSON(w, http.StatusOK, router)
+	utils.RespondJSON(w, http.StatusOK, router)
 }
 
 func (h *RouterHandler) HandleUpdateRouter(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
+		return
+	}
+
 	vars := mux.Vars(r)
 	routerID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid router ID"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid router ID"))
 		return
 	}
 
 	var req dto.UpdateRouterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid request body"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid request body"))
 		return
 	}
 
 	if err := h.validator.Struct(&req); err != nil {
-		api.RespondValidationError(w, err)
+		utils.RespondValidationError(w, err)
 		return
 	}
 
-	router, err := h.routerService.UpdateRouter(r.Context(), routerID, &req)
+	router, err := h.routerService.UpdateRouter(r.Context(), tenantID, routerID, &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			api.RespondError(w, http.StatusNotFound, api.ErrNotFound)
+			utils.RespondError(w, http.StatusNotFound, utils.ErrNotFound)
 			return
 		}
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondJSON(w, http.StatusOK, router)
+	utils.RespondJSON(w, http.StatusOK, router)
 }
 
 func (h *RouterHandler) HandleDeleteRouter(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
+		return
+	}
+
 	vars := mux.Vars(r)
 	routerID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid router ID"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid router ID"))
 		return
 	}
 
-	if err := h.routerService.DeleteRouter(r.Context(), routerID); err != nil {
+	if err := h.routerService.DeleteRouter(r.Context(), tenantID, routerID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			api.RespondError(w, http.StatusNotFound, api.ErrNotFound)
+			utils.RespondError(w, http.StatusNotFound, utils.ErrNotFound)
 			return
 		}
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondNoContent(w)
+	utils.RespondNoContent(w)
 }
 
 func parsePagination(r *http.Request) (int, int) {

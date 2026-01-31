@@ -46,7 +46,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 	}
 	
 	// Verify password
-	if err := auth.ComparePassword(user.PasswordHash, req.Password); err != nil {
+	if err := auth.VerifyPassword(user.PasswordHash, req.Password); err != nil {
 		s.logger.Warn("Login failed: invalid password", zap.String("email", req.Email))
 		return nil, fmt.Errorf("invalid credentials")
 	}
@@ -95,11 +95,11 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 }
 
 // Register creates a new user account
-func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.UserDTO, error) {
+func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (dto.UserDTO, error) {
 	// Check if email already exists
 	existingUser, err := s.userRepo.GetByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
-		return nil, fmt.Errorf("email already registered")
+		return dto.UserDTO{}, fmt.Errorf("email already registered")
 	}
 	
 	// Determine tenant
@@ -108,16 +108,16 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		// User is invited to existing tenant
 		tid, err := uuid.Parse(req.TenantID)
 		if err != nil {
-			return nil, fmt.Errorf("invalid tenant ID")
+			return dto.UserDTO{}, fmt.Errorf("invalid tenant ID")
 		}
 		
 		// Verify tenant exists and is active
 		tenant, err := s.tenantRepo.GetByID(ctx, tid)
 		if err != nil {
-			return nil, fmt.Errorf("invalid tenant")
+			return dto.UserDTO{}, fmt.Errorf("invalid tenant")
 		}
 		if tenant.Status != "active" {
-			return nil, fmt.Errorf("tenant is not active")
+			return dto.UserDTO{}, fmt.Errorf("tenant is not active")
 		}
 		
 		tenantID = tid
@@ -136,17 +136,17 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		
 		if err := s.tenantRepo.Create(ctx, tenant); err != nil {
 			s.logger.Error("Failed to create tenant", zap.Error(err))
-			return nil, fmt.Errorf("failed to create tenant")
+			return dto.UserDTO{}, fmt.Errorf("failed to create tenant")
 		}
 		
 		tenantID = tenant.ID
 	}
 	
 	// Hash password
-	passwordHash, err := auth.HashPassword(req.Password)
+	passwordHash, err := auth.HashPassword(req.Password, auth.DefaultBcryptCost)
 	if err != nil {
 		s.logger.Error("Failed to hash password", zap.Error(err))
-		return nil, fmt.Errorf("failed to process password")
+		return dto.UserDTO{}, fmt.Errorf("failed to process password")
 	}
 	
 	// Create user
@@ -163,7 +163,7 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		s.logger.Error("Failed to create user", zap.Error(err))
-		return nil, fmt.Errorf("failed to create user")
+		return dto.UserDTO{}, fmt.Errorf("failed to create user")
 	}
 	
 	s.logger.Info("User registered successfully", zap.String("email", user.Email))
@@ -195,20 +195,4 @@ func (s *AuthService) Logout(ctx context.Context, token string) error {
 	}
 	
 	return nil
-}
-
-// toUserDTO converts a User model to UserDTO
-func toUserDTO(user *models.User) dto.UserDTO {
-	return dto.UserDTO{
-		ID:            user.ID,
-		TenantID:      user.TenantID,
-		Email:         user.Email,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		Status:        user.Status,
-		EmailVerified: user.EmailVerified,
-		LastLoginAt:   user.LastLoginAt,
-		CreatedAt:     user.CreatedAt,
-		UpdatedAt:     user.UpdatedAt,
-	}
 }

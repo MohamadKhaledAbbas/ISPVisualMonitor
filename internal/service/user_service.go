@@ -6,7 +6,6 @@ import (
 
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/dto"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/repository"
-	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/models"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -29,11 +28,11 @@ func NewUserService(
 }
 
 // GetUser retrieves a user by ID
-func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (*dto.UserDTO, error) {
+func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (dto.UserDTO, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		s.logger.Error("Failed to get user", zap.Error(err))
-		return nil, fmt.Errorf("user not found")
+		return dto.UserDTO{}, fmt.Errorf("user not found")
 	}
 
 	userDTO := toUserDTO(user)
@@ -41,14 +40,14 @@ func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (*dto.UserD
 }
 
 // ListUsers retrieves a list of users
-func (s *UserService) ListUsers(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]*dto.UserDTO, int64, error) {
+func (s *UserService) ListUsers(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]dto.UserDTO, int64, error) {
 	users, total, err := s.userRepo.List(ctx, tenantID, opts)
 	if err != nil {
 		s.logger.Error("Failed to list users", zap.Error(err))
 		return nil, 0, fmt.Errorf("failed to list users")
 	}
 
-	userDTOs := make([]*dto.UserDTO, len(users))
+	userDTOs := make([]dto.UserDTO, len(users))
 	for i, user := range users {
 		userDTOs[i] = toUserDTO(user)
 	}
@@ -57,11 +56,11 @@ func (s *UserService) ListUsers(ctx context.Context, tenantID uuid.UUID, opts re
 }
 
 // UpdateUser updates an existing user
-func (s *UserService) UpdateUser(ctx context.Context, userID uuid.UUID, req *dto.UpdateUserRequest) (*dto.UserDTO, error) {
+func (s *UserService) UpdateUser(ctx context.Context, userID uuid.UUID, req *dto.UpdateUserRequest) (dto.UserDTO, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		s.logger.Error("Failed to get user", zap.Error(err))
-		return nil, fmt.Errorf("user not found")
+		return dto.UserDTO{}, fmt.Errorf("user not found")
 	}
 
 	if req.FirstName != nil {
@@ -76,27 +75,11 @@ func (s *UserService) UpdateUser(ctx context.Context, userID uuid.UUID, req *dto
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		s.logger.Error("Failed to update user", zap.Error(err))
-		return nil, fmt.Errorf("failed to update user")
+		return dto.UserDTO{}, fmt.Errorf("failed to update user")
 	}
 
 	s.logger.Info("User updated successfully", zap.String("user_id", user.ID.String()))
 
 	userDTO := toUserDTO(user)
 	return userDTO, nil
-}
-
-// toUserDTO converts a User model to UserDTO
-func toUserDTO(user *models.User) *dto.UserDTO {
-	return &dto.UserDTO{
-		ID:            user.ID,
-		TenantID:      user.TenantID,
-		Email:         user.Email,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		Status:        user.Status,
-		EmailVerified: user.EmailVerified,
-		LastLoginAt:   user.LastLoginAt,
-		CreatedAt:     user.CreatedAt,
-		UpdatedAt:     user.UpdatedAt,
-	}
 }

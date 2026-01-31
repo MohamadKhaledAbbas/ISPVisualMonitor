@@ -32,25 +32,25 @@ func NewInterfaceService(
 }
 
 // GetInterface retrieves an interface by ID
-func (s *InterfaceService) GetInterface(ctx context.Context, tenantID, interfaceID uuid.UUID) (*dto.InterfaceDTO, error) {
+func (s *InterfaceService) GetInterface(ctx context.Context, tenantID, interfaceID uuid.UUID) (dto.InterfaceDTO, error) {
 	iface, err := s.interfaceRepo.GetByID(ctx, tenantID, interfaceID)
 	if err != nil {
 		s.logger.Error("Failed to get interface", zap.Error(err))
-		return nil, fmt.Errorf("interface not found")
+		return dto.InterfaceDTO{}, fmt.Errorf("interface not found")
 	}
 
 	return toInterfaceDTO(iface, ""), nil
 }
 
 // ListInterfaces retrieves a list of interfaces
-func (s *InterfaceService) ListInterfaces(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]*dto.InterfaceDTO, int64, error) {
+func (s *InterfaceService) ListInterfaces(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]dto.InterfaceDTO, int64, error) {
 	interfaces, total, err := s.interfaceRepo.List(ctx, tenantID, opts)
 	if err != nil {
 		s.logger.Error("Failed to list interfaces", zap.Error(err))
 		return nil, 0, fmt.Errorf("failed to list interfaces")
 	}
 
-	interfaceDTOs := make([]*dto.InterfaceDTO, len(interfaces))
+	interfaceDTOs := make([]dto.InterfaceDTO, len(interfaces))
 	for i, iface := range interfaces {
 		interfaceDTOs[i] = toInterfaceDTO(iface, "")
 	}
@@ -59,7 +59,7 @@ func (s *InterfaceService) ListInterfaces(ctx context.Context, tenantID uuid.UUI
 }
 
 // ListRouterInterfaces retrieves a list of interfaces for a specific router
-func (s *InterfaceService) ListRouterInterfaces(ctx context.Context, tenantID, routerID uuid.UUID, opts repository.ListOptions) ([]*dto.InterfaceDTO, int64, error) {
+func (s *InterfaceService) ListRouterInterfaces(ctx context.Context, tenantID, routerID uuid.UUID, opts repository.ListOptions) ([]dto.InterfaceDTO, int64, error) {
 	// Get router name for the DTO
 	router, err := s.routerRepo.GetByID(ctx, tenantID, routerID)
 	if err != nil {
@@ -73,7 +73,7 @@ func (s *InterfaceService) ListRouterInterfaces(ctx context.Context, tenantID, r
 		return nil, 0, fmt.Errorf("failed to list router interfaces")
 	}
 
-	interfaceDTOs := make([]*dto.InterfaceDTO, len(interfaces))
+	interfaceDTOs := make([]dto.InterfaceDTO, len(interfaces))
 	for i, iface := range interfaces {
 		interfaceDTOs[i] = toInterfaceDTO(iface, router.Name)
 	}
@@ -82,8 +82,8 @@ func (s *InterfaceService) ListRouterInterfaces(ctx context.Context, tenantID, r
 }
 
 // toInterfaceDTO converts an Interface model to InterfaceDTO
-func toInterfaceDTO(iface *models.Interface, routerName string) *dto.InterfaceDTO {
-	return &dto.InterfaceDTO{
+func toInterfaceDTO(iface *models.Interface, routerName string) dto.InterfaceDTO {
+	return dto.InterfaceDTO{
 		ID:          iface.ID,
 		TenantID:    iface.TenantID,
 		RouterID:    iface.RouterID,

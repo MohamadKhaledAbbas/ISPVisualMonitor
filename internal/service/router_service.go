@@ -29,7 +29,7 @@ func NewRouterService(
 }
 
 // CreateRouter creates a new router
-func (s *RouterService) CreateRouter(ctx context.Context, tenantID uuid.UUID, req *dto.CreateRouterRequest) (*dto.RouterDTO, error) {
+func (s *RouterService) CreateRouter(ctx context.Context, tenantID uuid.UUID, req *dto.CreateRouterRequest) (dto.RouterDTO, error) {
 	router := &models.Router{
 		ID:                     uuid.New(),
 		TenantID:               tenantID,
@@ -70,7 +70,7 @@ func (s *RouterService) CreateRouter(ctx context.Context, tenantID uuid.UUID, re
 
 	if err := s.routerRepo.Create(ctx, router); err != nil {
 		s.logger.Error("Failed to create router", zap.Error(err))
-		return nil, fmt.Errorf("failed to create router")
+		return dto.RouterDTO{}, fmt.Errorf("failed to create router")
 	}
 
 	s.logger.Info("Router created successfully", zap.String("router_id", router.ID.String()))
@@ -79,25 +79,25 @@ func (s *RouterService) CreateRouter(ctx context.Context, tenantID uuid.UUID, re
 }
 
 // GetRouter retrieves a router by ID
-func (s *RouterService) GetRouter(ctx context.Context, tenantID, routerID uuid.UUID) (*dto.RouterDTO, error) {
+func (s *RouterService) GetRouter(ctx context.Context, tenantID, routerID uuid.UUID) (dto.RouterDTO, error) {
 	router, err := s.routerRepo.GetByID(ctx, tenantID, routerID)
 	if err != nil {
 		s.logger.Error("Failed to get router", zap.Error(err))
-		return nil, fmt.Errorf("router not found")
+		return dto.RouterDTO{}, fmt.Errorf("router not found")
 	}
 
 	return toRouterDTO(router), nil
 }
 
 // ListRouters retrieves a list of routers
-func (s *RouterService) ListRouters(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]*dto.RouterDTO, int64, error) {
+func (s *RouterService) ListRouters(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]dto.RouterDTO, int64, error) {
 	routers, total, err := s.routerRepo.List(ctx, tenantID, opts)
 	if err != nil {
 		s.logger.Error("Failed to list routers", zap.Error(err))
 		return nil, 0, fmt.Errorf("failed to list routers")
 	}
 
-	routerDTOs := make([]*dto.RouterDTO, len(routers))
+	routerDTOs := make([]dto.RouterDTO, len(routers))
 	for i, router := range routers {
 		routerDTOs[i] = toRouterDTO(router)
 	}
@@ -106,11 +106,11 @@ func (s *RouterService) ListRouters(ctx context.Context, tenantID uuid.UUID, opt
 }
 
 // UpdateRouter updates an existing router
-func (s *RouterService) UpdateRouter(ctx context.Context, tenantID, routerID uuid.UUID, req *dto.UpdateRouterRequest) (*dto.RouterDTO, error) {
+func (s *RouterService) UpdateRouter(ctx context.Context, tenantID, routerID uuid.UUID, req *dto.UpdateRouterRequest) (dto.RouterDTO, error) {
 	router, err := s.routerRepo.GetByID(ctx, tenantID, routerID)
 	if err != nil {
 		s.logger.Error("Failed to get router", zap.Error(err))
-		return nil, fmt.Errorf("router not found")
+		return dto.RouterDTO{}, fmt.Errorf("router not found")
 	}
 
 	if req.Name != nil {
@@ -144,7 +144,7 @@ func (s *RouterService) UpdateRouter(ctx context.Context, tenantID, routerID uui
 
 	if err := s.routerRepo.Update(ctx, router); err != nil {
 		s.logger.Error("Failed to update router", zap.Error(err))
-		return nil, fmt.Errorf("failed to update router")
+		return dto.RouterDTO{}, fmt.Errorf("failed to update router")
 	}
 
 	s.logger.Info("Router updated successfully", zap.String("router_id", router.ID.String()))
@@ -165,8 +165,8 @@ func (s *RouterService) DeleteRouter(ctx context.Context, tenantID, routerID uui
 }
 
 // toRouterDTO converts a Router model to RouterDTO
-func toRouterDTO(router *models.Router) *dto.RouterDTO {
-	routerDTO := &dto.RouterDTO{
+func toRouterDTO(router *models.Router) dto.RouterDTO {
+	routerDTO := dto.RouterDTO{
 		ID:           router.ID,
 		TenantID:     router.TenantID,
 		Name:         router.Name,

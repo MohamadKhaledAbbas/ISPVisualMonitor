@@ -1,4 +1,4 @@
-package api
+package utils
 
 import (
 	"github.com/go-playground/validator/v10"
@@ -19,4 +19,9 @@ func NewValidator() *Validator {
 // Validate validates a struct
 func (v *Validator) Validate(i interface{}) error {
 	return v.validator.Struct(i)
+}
+
+// Validator returns the underlying validator instance
+func (v *Validator) Validator() *validator.Validate {
+	return v.validator
 }

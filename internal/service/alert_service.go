@@ -29,25 +29,25 @@ func NewAlertService(
 }
 
 // GetAlert retrieves an alert by ID
-func (s *AlertService) GetAlert(ctx context.Context, tenantID, alertID uuid.UUID) (*dto.AlertDTO, error) {
+func (s *AlertService) GetAlert(ctx context.Context, tenantID, alertID uuid.UUID) (dto.AlertDTO, error) {
 	alert, err := s.alertRepo.GetByID(ctx, tenantID, alertID)
 	if err != nil {
 		s.logger.Error("Failed to get alert", zap.Error(err))
-		return nil, fmt.Errorf("alert not found")
+		return dto.AlertDTO{}, fmt.Errorf("alert not found")
 	}
 
 	return toAlertDTO(alert), nil
 }
 
 // ListAlerts retrieves a list of alerts
-func (s *AlertService) ListAlerts(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]*dto.AlertDTO, int64, error) {
+func (s *AlertService) ListAlerts(ctx context.Context, tenantID uuid.UUID, opts repository.ListOptions) ([]dto.AlertDTO, int64, error) {
 	alerts, total, err := s.alertRepo.List(ctx, tenantID, opts)
 	if err != nil {
 		s.logger.Error("Failed to list alerts", zap.Error(err))
 		return nil, 0, fmt.Errorf("failed to list alerts")
 	}
 
-	alertDTOs := make([]*dto.AlertDTO, len(alerts))
+	alertDTOs := make([]dto.AlertDTO, len(alerts))
 	for i, alert := range alerts {
 		alertDTOs[i] = toAlertDTO(alert)
 	}
@@ -68,8 +68,8 @@ func (s *AlertService) AcknowledgeAlert(ctx context.Context, tenantID, alertID, 
 }
 
 // toAlertDTO converts an Alert model to AlertDTO
-func toAlertDTO(alert *models.Alert) *dto.AlertDTO {
-	return &dto.AlertDTO{
+func toAlertDTO(alert *models.Alert) dto.AlertDTO {
+	return dto.AlertDTO{
 		ID:             alert.ID,
 		TenantID:       alert.TenantID,
 		Name:           alert.Name,

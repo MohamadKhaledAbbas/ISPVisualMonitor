@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/utils"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/middleware"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/service"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -25,49 +26,61 @@ func NewMetricsHandler(metricsService *service.MetricsService, validator *valida
 }
 
 func (h *MetricsHandler) HandleGetInterfaceMetrics(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
+		return
+	}
+
 	vars := mux.Vars(r)
 	interfaceID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid interface ID"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid interface ID"))
 		return
 	}
 
 	from, to := parseTimeRange(r)
 
-	metrics, err := h.metricsService.GetInterfaceMetrics(r.Context(), interfaceID, from, to)
+	metrics, err := h.metricsService.GetInterfaceMetrics(r.Context(), tenantID, interfaceID, from, to)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			api.RespondError(w, http.StatusNotFound, api.ErrNotFound)
+			utils.RespondError(w, http.StatusNotFound, utils.ErrNotFound)
 			return
 		}
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondJSON(w, http.StatusOK, metrics)
+	utils.RespondJSON(w, http.StatusOK, metrics)
 }
 
 func (h *MetricsHandler) HandleGetRouterMetrics(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal.WithDetails("Tenant context not found"))
+		return
+	}
+
 	vars := mux.Vars(r)
 	routerID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		api.RespondError(w, http.StatusBadRequest, api.ErrBadRequest.WithDetails("Invalid router ID"))
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid router ID"))
 		return
 	}
 
 	from, to := parseTimeRange(r)
 
-	metrics, err := h.metricsService.GetRouterMetrics(r.Context(), routerID, from, to)
+	metrics, err := h.metricsService.GetRouterMetrics(r.Context(), tenantID, routerID, from, to)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			api.RespondError(w, http.StatusNotFound, api.ErrNotFound)
+			utils.RespondError(w, http.StatusNotFound, utils.ErrNotFound)
 			return
 		}
-		api.RespondError(w, http.StatusInternalServerError, api.ErrInternal)
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
 		return
 	}
 
-	api.RespondJSON(w, http.StatusOK, metrics)
+	utils.RespondJSON(w, http.StatusOK, metrics)
 }
 
 func parseTimeRange(r *http.Request) (time.Time, time.Time) {
