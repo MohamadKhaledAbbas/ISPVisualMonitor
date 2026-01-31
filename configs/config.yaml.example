@@ -1,0 +1,92 @@
+# Environment Configuration
+# Copy this file to .env and customize for your environment
+
+# =============================================================================
+# Deployment Mode
+# =============================================================================
+# Options: development, production, on-premise
+DEPLOYMENT_MODE=development
+
+# Set to true for cloud-hosted deployment
+CLOUD_MODE=false
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=ispmonitor
+DB_PASSWORD=ispmonitor
+DB_NAME=ispmonitor
+DB_SSLMODE=disable
+DB_MAX_CONNS=25
+DB_MIN_CONNS=5
+
+# For production, use a connection string:
+# DATABASE_URL=postgres://user:password@host:5432/dbname?sslmode=require
+
+# =============================================================================
+# Redis Configuration
+# =============================================================================
+REDIS_URL=redis://localhost:6379
+
+# =============================================================================
+# API Configuration
+# =============================================================================
+API_PORT=8080
+ALLOWED_ORIGINS=*
+RATE_LIMIT_PER_MIN=100
+
+# =============================================================================
+# Authentication Configuration
+# =============================================================================
+# IMPORTANT: Change this in production!
+JWT_SECRET=change-me-in-production-please-use-strong-secret
+JWT_SIGNING_METHOD=HS256
+JWT_ISSUER=ispvisualmonitor
+ACCESS_TOKEN_TTL=15m
+REFRESH_TOKEN_TTL=168h
+
+# For RS256 signing (optional):
+# JWT_PRIVATE_KEY=/path/to/private.pem
+# JWT_PUBLIC_KEY=/path/to/public.pem
+
+# OIDC Configuration (optional)
+AUTH_PROVIDER=local
+# OIDC_ISSUER_URL=https://your-keycloak.example.com/realms/ispmonitor
+# OIDC_CLIENT_ID=ispmonitor
+# OIDC_CLIENT_SECRET=your-client-secret
+
+# =============================================================================
+# Poller Configuration
+# =============================================================================
+POLLER_WORKERS=10
+POLLER_INTERVAL=300
+POLLER_TIMEOUT=30
+POLLER_RETRY=3
+POLLER_CONCURRENT=50
+
+# =============================================================================
+# License Configuration (Production/On-Premise only)
+# =============================================================================
+# LICENSE_KEY=your-license-key
+# LICENSE_SERVER_URL=https://license.ispmonitor.com/v1
+
+# =============================================================================
+# Observability Configuration
+# =============================================================================
+ENABLE_METRICS=true
+ENABLE_TRACING=false
+ENABLE_PROFILING=false
+
+LOG_LEVEL=info
+LOG_FORMAT=json
+
+METRICS_PORT=9090
+
+# =============================================================================
+# Feature Flags
+# =============================================================================
+# FEATURE_MULTI_TENANT=true
+# FEATURE_ADVANCED_ALERTS=true
+# FEATURE_CUSTOM_DASHBOARDS=false
