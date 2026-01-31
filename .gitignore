@@ -50,3 +50,18 @@ logs/
 # Temporary files
 tmp/
 temp/
+
+# Docker
+docker/ssl/
+
+# Kubernetes secrets (never commit real secrets)
+deploy/k8s/**/secrets.yaml
+!deploy/k8s/base/secrets.yaml
+
+# Backup files
+backups/
+*.backup
+*.bak
+
+# License cache
+license.cache

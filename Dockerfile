@@ -1,36 +1,48 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.21-alpine AS builder
+
+ARG VERSION=dev
+WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache git make
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Build with optimizations
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s -X github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/version.Version=${VERSION}" \
+    -o /ispmonitor ./cmd/ispmonitor
+
+# Runtime stage
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -g 1000 ispmonitor && \
+    adduser -u 1000 -G ispmonitor -s /bin/sh -D ispmonitor
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy binary
+COPY --from=builder /ispmonitor .
 
-# Download dependencies
-RUN go mod download
+# Copy default config
+COPY configs/config.yaml.example /app/config.yaml
 
-# Copy source code
-COPY . .
+# Set ownership
+RUN chown -R ispmonitor:ispmonitor /app
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ispmonitor ./cmd/ispmonitor
+USER ispmonitor
 
-# Final stage
-FROM alpine:latest
-
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-# Copy binary from builder
-COPY --from=builder /app/ispmonitor .
-
-# Expose port
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Run the application
-CMD ["./ispmonitor"]
+ENTRYPOINT ["./ispmonitor"]

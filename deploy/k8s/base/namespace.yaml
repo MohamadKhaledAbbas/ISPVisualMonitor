@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ispmonitor
+  labels:
+    app.kubernetes.io/name: ispmonitor
+    app.kubernetes.io/part-of: ispmonitor

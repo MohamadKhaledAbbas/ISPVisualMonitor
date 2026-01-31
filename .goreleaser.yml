@@ -1,0 +1,110 @@
+# GoReleaser configuration for ISP Visual Monitor
+# Documentation: https://goreleaser.com
+
+version: 2
+
+project_name: ispvisualmonitor
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: ispmonitor
+    main: ./cmd/ispmonitor
+    binary: ispmonitor
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/version.Version={{.Version}}
+      - -X github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/version.GitCommit={{.Commit}}
+      - -X github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/version.GitBranch={{.Branch}}
+      - -X github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/version.BuildDate={{.Date}}
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+      - configs/*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: MohamadKhaledAbbas
+    name: ISPVisualMonitor
+  draft: false
+  prerelease: auto
+  mode: replace
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:{{ .Version }}-amd64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--build-arg=VERSION={{.Version}}"
+    dockerfile: Dockerfile
+
+  - image_templates:
+      - "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:{{ .Version }}-arm64"
+    use: buildx
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--build-arg=VERSION={{.Version}}"
+    dockerfile: Dockerfile
+
+docker_manifests:
+  - name_template: "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:{{ .Version }}-amd64"
+      - "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:latest"
+    image_templates:
+      - "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:{{ .Version }}-amd64"
+      - "ghcr.io/mohamadkhaledabbas/ispvisualmonitor:{{ .Version }}-arm64"

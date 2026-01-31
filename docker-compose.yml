@@ -1,99 +1,108 @@
 version: '3.8'
 
+# Development Docker Compose configuration
+# Use with: docker-compose up -d
+
 services:
-  # PostgreSQL database with PostGIS extension
-  postgres:
-    image: postgis/postgis:15-3.3
-    container_name: ispmonitor-postgres
-    environment:
-      POSTGRES_USER: ispmonitor
-      POSTGRES_PASSWORD: ispmonitor
-      POSTGRES_DB: ispmonitor
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/migrations:/docker-entrypoint-initdb.d
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ispmonitor-api
     ports:
-      - "5432:5432"
+      - "8080:8080"
+    environment:
+      - DEPLOYMENT_MODE=development
+      - DATABASE_URL=postgres://ispmonitor:ispmonitor@postgres:5432/ispmonitor?sslmode=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ispmonitor
+      - DB_PASSWORD=ispmonitor
+      - DB_NAME=ispmonitor
+      - DB_SSLMODE=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-development-secret-change-in-production}
+      - ALLOWED_ORIGINS=*
+      - ENABLE_METRICS=true
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ispmonitor"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - ispmonitor
 
-  # Redis for caching and session management
-  redis:
-    image: redis:7-alpine
-    container_name: ispmonitor-redis
-    ports:
-      - "6379:6379"
+  poller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ispmonitor-poller
+    command: ["./ispmonitor", "--mode=poller"]
+    environment:
+      - DEPLOYMENT_MODE=development
+      - DATABASE_URL=postgres://ispmonitor:ispmonitor@postgres:5432/ispmonitor?sslmode=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ispmonitor
+      - DB_PASSWORD=ispmonitor
+      - DB_NAME=ispmonitor
+      - DB_SSLMODE=disable
+      - REDIS_URL=redis://redis:6379
+      - POLLER_WORKERS=10
+      - POLLER_INTERVAL=300
+      - POLLER_CONCURRENT=50
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - ispmonitor
+
+  postgres:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: ispmonitor-postgres
     volumes:
-      - redis_data:/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    environment:
+      POSTGRES_USER: ispmonitor
+      POSTGRES_PASSWORD: ispmonitor
+      POSTGRES_DB: ispmonitor
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
+      test: ["CMD-SHELL", "pg_isready -U ispmonitor"]
+      interval: 5s
+      timeout: 5s
       retries: 5
     networks:
       - ispmonitor
 
-  # Go application
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: ispmonitor-app
-    environment:
-      # Database
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: ispmonitor
-      DB_PASSWORD: ispmonitor
-      DB_NAME: ispmonitor
-      DB_SSLMODE: disable
-      
-      # API
-      API_PORT: 8080
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please-use-strong-secret}
-      ALLOWED_ORIGINS: "*"
-      
-      # Poller
-      POLLER_WORKERS: 10
-      POLLER_INTERVAL: 300
-      POLLER_CONCURRENT: 50
-    ports:
-      - "18080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - ispmonitor
-
-  # Nginx for serving MapLibre tiles and frontend
-  nginx:
-    image: nginx:alpine
-    container_name: ispmonitor-nginx
+  redis:
+    image: redis:7-alpine
+    container_name: ispmonitor-redis
     volumes:
-      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./docker/tiles:/usr/share/nginx/html/tiles:ro
-      - ./frontend/dist:/usr/share/nginx/html:ro
+      - redis_data:/data
     ports:
-      - "80:80"
-    depends_on:
-      - app
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - ispmonitor
 
-  # Prometheus for metrics collection (optional)
   prometheus:
     image: prom/prometheus:latest
     container_name: ispmonitor-prometheus
     volumes:
-      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -103,17 +112,17 @@ services:
     networks:
       - ispmonitor
 
-  # Grafana for visualization (optional)
   grafana:
     image: grafana/grafana:latest
     container_name: ispmonitor-grafana
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
     volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
     depends_on:
       - prometheus
     networks:
@@ -125,10 +134,6 @@ networks:
 
 volumes:
   postgres_data:
-    driver: local
   redis_data:
-    driver: local
   prometheus_data:
-    driver: local
   grafana_data:
-    driver: local

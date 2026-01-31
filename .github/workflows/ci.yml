@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: ispmonitor_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Run tests
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: test
+          DB_PASSWORD: test
+          DB_NAME: ispmonitor_test
+          DB_SSLMODE: disable
+          JWT_SECRET: test-secret-for-ci
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.out
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+
+  build:
+    needs: [lint, test, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/ispmonitor-linux-amd64 ./cmd/ispmonitor
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin/ispmonitor-linux-arm64 ./cmd/ispmonitor
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: bin/
