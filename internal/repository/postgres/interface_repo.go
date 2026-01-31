@@ -29,7 +29,7 @@ func (r *InterfaceRepo) GetByID(ctx context.Context, tenantID, interfaceID uuid.
 		FROM interfaces
 		WHERE id = $1 AND tenant_id = $2
 	`
-	
+
 	iface := &models.Interface{}
 	err := r.db.QueryRowContext(ctx, query, interfaceID, tenantID).Scan(
 		&iface.ID, &iface.TenantID, &iface.RouterID, &iface.Name, &iface.Description,
@@ -37,11 +37,11 @@ func (r *InterfaceRepo) GetByID(ctx context.Context, tenantID, interfaceID uuid.
 		&iface.IPAddress, &iface.SubnetMask, &iface.Status, &iface.AdminStatus,
 		&iface.CreatedAt, &iface.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("interface not found")
 	}
-	
+
 	return iface, err
 }
 
@@ -53,7 +53,7 @@ func (r *InterfaceRepo) List(ctx context.Context, tenantID uuid.UUID, opts repos
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	offset := (opts.Page - 1) * opts.PageSize
 	query := `
 		SELECT id, tenant_id, router_id, name, description, if_index, if_type,
@@ -64,13 +64,13 @@ func (r *InterfaceRepo) List(ctx context.Context, tenantID uuid.UUID, opts repos
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, tenantID, opts.PageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	interfaces := make([]*models.Interface, 0)
 	for rows.Next() {
 		iface := &models.Interface{}
@@ -85,7 +85,7 @@ func (r *InterfaceRepo) List(ctx context.Context, tenantID uuid.UUID, opts repos
 		}
 		interfaces = append(interfaces, iface)
 	}
-	
+
 	return interfaces, total, rows.Err()
 }
 
@@ -97,7 +97,7 @@ func (r *InterfaceRepo) ListByRouter(ctx context.Context, tenantID, routerID uui
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	offset := (opts.Page - 1) * opts.PageSize
 	query := `
 		SELECT id, tenant_id, router_id, name, description, if_index, if_type,
@@ -108,13 +108,13 @@ func (r *InterfaceRepo) ListByRouter(ctx context.Context, tenantID, routerID uui
 		ORDER BY created_at DESC
 		LIMIT $3 OFFSET $4
 	`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, tenantID, routerID, opts.PageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	interfaces := make([]*models.Interface, 0)
 	for rows.Next() {
 		iface := &models.Interface{}
@@ -129,6 +129,6 @@ func (r *InterfaceRepo) ListByRouter(ctx context.Context, tenantID, routerID uui
 		}
 		interfaces = append(interfaces, iface)
 	}
-	
+
 	return interfaces, total, rows.Err()
 }

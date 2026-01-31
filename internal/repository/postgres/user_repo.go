@@ -28,21 +28,21 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) error {
 			status, email_verified, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
-	
+
 	now := time.Now()
 	user.CreatedAt = now
 	user.UpdatedAt = now
-	
+
 	if user.ID == uuid.Nil {
 		user.ID = uuid.New()
 	}
-	
+
 	_, err := r.db.ExecContext(ctx, query,
 		user.ID, user.TenantID, user.Email, user.PasswordHash,
 		user.FirstName, user.LastName, user.Status, user.EmailVerified,
 		user.CreatedAt, user.UpdatedAt,
 	)
-	
+
 	return err
 }
 
@@ -54,18 +54,18 @@ func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User, err
 		FROM users
 		WHERE id = $1
 	`
-	
+
 	user := &models.User{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.TenantID, &user.Email, &user.PasswordHash,
 		&user.FirstName, &user.LastName, &user.Status, &user.EmailVerified,
 		&user.LastLoginAt, &user.CreatedAt, &user.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
 	}
-	
+
 	return user, err
 }
 
@@ -77,18 +77,18 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, 
 		FROM users
 		WHERE email = $1
 	`
-	
+
 	user := &models.User{}
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID, &user.TenantID, &user.Email, &user.PasswordHash,
 		&user.FirstName, &user.LastName, &user.Status, &user.EmailVerified,
 		&user.LastLoginAt, &user.CreatedAt, &user.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
 	}
-	
+
 	return user, err
 }
 
@@ -101,7 +101,7 @@ func (r *UserRepo) List(ctx context.Context, tenantID uuid.UUID, opts repository
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Get paginated results
 	offset := (opts.Page - 1) * opts.PageSize
 	query := `
@@ -112,13 +112,13 @@ func (r *UserRepo) List(ctx context.Context, tenantID uuid.UUID, opts repository
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, tenantID, opts.PageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	users := make([]*models.User, 0)
 	for rows.Next() {
 		user := &models.User{}
@@ -132,7 +132,7 @@ func (r *UserRepo) List(ctx context.Context, tenantID uuid.UUID, opts repository
 		}
 		users = append(users, user)
 	}
-	
+
 	return users, total, rows.Err()
 }
 
@@ -144,15 +144,15 @@ func (r *UserRepo) Update(ctx context.Context, user *models.User) error {
 			email_verified = $4, last_login_at = $5, updated_at = $6
 		WHERE id = $7
 	`
-	
+
 	user.UpdatedAt = time.Now()
-	
+
 	_, err := r.db.ExecContext(ctx, query,
 		user.FirstName, user.LastName, user.Status,
 		user.EmailVerified, user.LastLoginAt, user.UpdatedAt,
 		user.ID,
 	)
-	
+
 	return err
 }
 

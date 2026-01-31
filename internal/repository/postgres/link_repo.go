@@ -29,18 +29,18 @@ func (r *LinkRepo) GetByID(ctx context.Context, tenantID, linkID uuid.UUID) (*mo
 		FROM links
 		WHERE id = $1 AND tenant_id = $2
 	`
-	
+
 	link := &models.Link{}
 	err := r.db.QueryRowContext(ctx, query, linkID, tenantID).Scan(
 		&link.ID, &link.TenantID, &link.Name, &link.SourceInterfaceID, &link.TargetInterfaceID,
 		&link.LinkType, &link.CapacityMbps, &link.LatencyMs, &link.Status, &link.PathGeometry,
 		&link.Description, &link.CreatedAt, &link.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("link not found")
 	}
-	
+
 	return link, err
 }
 
@@ -52,7 +52,7 @@ func (r *LinkRepo) List(ctx context.Context, tenantID uuid.UUID, opts repository
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	offset := (opts.Page - 1) * opts.PageSize
 	query := `
 		SELECT id, tenant_id, name, source_interface_id, target_interface_id,
@@ -63,13 +63,13 @@ func (r *LinkRepo) List(ctx context.Context, tenantID uuid.UUID, opts repository
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, tenantID, opts.PageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	links := make([]*models.Link, 0)
 	for rows.Next() {
 		link := &models.Link{}
@@ -83,6 +83,6 @@ func (r *LinkRepo) List(ctx context.Context, tenantID uuid.UUID, opts repository
 		}
 		links = append(links, link)
 	}
-	
+
 	return links, total, rows.Err()
 }

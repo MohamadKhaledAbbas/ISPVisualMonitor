@@ -39,14 +39,14 @@ type User struct {
 
 // Role represents a role with permissions
 type Role struct {
-	ID          uuid.UUID `json:"id" db:"id"`
+	ID          uuid.UUID  `json:"id" db:"id"`
 	TenantID    *uuid.UUID `json:"tenant_id,omitempty" db:"tenant_id"`
-	Name        string    `json:"name" db:"name"`
-	Description *string   `json:"description,omitempty" db:"description"`
-	IsSystem    bool      `json:"is_system" db:"is_system"`
-	IsCustom    bool      `json:"is_custom" db:"is_custom"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	Name        string     `json:"name" db:"name"`
+	Description *string    `json:"description,omitempty" db:"description"`
+	IsSystem    bool       `json:"is_system" db:"is_system"`
+	IsCustom    bool       `json:"is_custom" db:"is_custom"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // Permission represents a permission
@@ -86,39 +86,39 @@ type Router struct {
 
 // Interface represents a router interface
 type Interface struct {
-	ID          uuid.UUID  `json:"id" db:"id"`
-	TenantID    uuid.UUID  `json:"tenant_id" db:"tenant_id"`
-	RouterID    uuid.UUID  `json:"router_id" db:"router_id"`
-	Name        string     `json:"name" db:"name"`
-	Description *string    `json:"description,omitempty" db:"description"`
-	IfIndex     *int       `json:"if_index,omitempty" db:"if_index"`
-	IfType      *string    `json:"if_type,omitempty" db:"if_type"`
-	SpeedMbps   *int64     `json:"speed_mbps,omitempty" db:"speed_mbps"`
-	MTU         *int       `json:"mtu,omitempty" db:"mtu"`
-	MACAddress  *string    `json:"mac_address,omitempty" db:"mac_address"`
-	IPAddress   *string    `json:"ip_address,omitempty" db:"ip_address"`
-	SubnetMask  *string    `json:"subnet_mask,omitempty" db:"subnet_mask"`
-	Status      string     `json:"status" db:"status"`
-	AdminStatus string     `json:"admin_status" db:"admin_status"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	TenantID    uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	RouterID    uuid.UUID `json:"router_id" db:"router_id"`
+	Name        string    `json:"name" db:"name"`
+	Description *string   `json:"description,omitempty" db:"description"`
+	IfIndex     *int      `json:"if_index,omitempty" db:"if_index"`
+	IfType      *string   `json:"if_type,omitempty" db:"if_type"`
+	SpeedMbps   *int64    `json:"speed_mbps,omitempty" db:"speed_mbps"`
+	MTU         *int      `json:"mtu,omitempty" db:"mtu"`
+	MACAddress  *string   `json:"mac_address,omitempty" db:"mac_address"`
+	IPAddress   *string   `json:"ip_address,omitempty" db:"ip_address"`
+	SubnetMask  *string   `json:"subnet_mask,omitempty" db:"subnet_mask"`
+	Status      string    `json:"status" db:"status"`
+	AdminStatus string    `json:"admin_status" db:"admin_status"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Link represents a connection between two interfaces
 type Link struct {
-	ID                uuid.UUID  `json:"id" db:"id"`
-	TenantID          uuid.UUID  `json:"tenant_id" db:"tenant_id"`
-	Name              *string    `json:"name,omitempty" db:"name"`
-	SourceInterfaceID uuid.UUID  `json:"source_interface_id" db:"source_interface_id"`
-	TargetInterfaceID uuid.UUID  `json:"target_interface_id" db:"target_interface_id"`
-	LinkType          string     `json:"link_type" db:"link_type"`
-	CapacityMbps      *int64     `json:"capacity_mbps,omitempty" db:"capacity_mbps"`
-	LatencyMs         *float64   `json:"latency_ms,omitempty" db:"latency_ms"`
-	Status            string     `json:"status" db:"status"`
-	PathGeometry      *string    `json:"path_geometry,omitempty" db:"path_geometry"` // PostGIS LINESTRING
-	Description       *string    `json:"description,omitempty" db:"description"`
-	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at" db:"updated_at"`
+	ID                uuid.UUID `json:"id" db:"id"`
+	TenantID          uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	Name              *string   `json:"name,omitempty" db:"name"`
+	SourceInterfaceID uuid.UUID `json:"source_interface_id" db:"source_interface_id"`
+	TargetInterfaceID uuid.UUID `json:"target_interface_id" db:"target_interface_id"`
+	LinkType          string    `json:"link_type" db:"link_type"`
+	CapacityMbps      *int64    `json:"capacity_mbps,omitempty" db:"capacity_mbps"`
+	LatencyMs         *float64  `json:"latency_ms,omitempty" db:"latency_ms"`
+	Status            string    `json:"status" db:"status"`
+	PathGeometry      *string   `json:"path_geometry,omitempty" db:"path_geometry"` // PostGIS LINESTRING
+	Description       *string   `json:"description,omitempty" db:"description"`
+	CreatedAt         time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // POP represents a Point of Presence
@@ -139,18 +139,18 @@ type POP struct {
 
 // Alert represents an alert
 type Alert struct {
-	ID              uuid.UUID  `json:"id" db:"id"`
-	TenantID        uuid.UUID  `json:"tenant_id" db:"tenant_id"`
-	RuleID          *uuid.UUID `json:"rule_id,omitempty" db:"rule_id"`
-	Name            string     `json:"name" db:"name"`
-	Description     *string    `json:"description,omitempty" db:"description"`
-	Severity        string     `json:"severity" db:"severity"`
-	Status          string     `json:"status" db:"status"`
-	TargetType      *string    `json:"target_type,omitempty" db:"target_type"`
-	TargetID        *uuid.UUID `json:"target_id,omitempty" db:"target_id"`
-	TriggeredAt     time.Time  `json:"triggered_at" db:"triggered_at"`
-	AcknowledgedAt  *time.Time `json:"acknowledged_at,omitempty" db:"acknowledged_at"`
-	AcknowledgedBy  *uuid.UUID `json:"acknowledged_by,omitempty" db:"acknowledged_by"`
-	ResolvedAt      *time.Time `json:"resolved_at,omitempty" db:"resolved_at"`
-	Metadata        *string    `json:"metadata,omitempty" db:"metadata"` // JSONB as string
+	ID             uuid.UUID  `json:"id" db:"id"`
+	TenantID       uuid.UUID  `json:"tenant_id" db:"tenant_id"`
+	RuleID         *uuid.UUID `json:"rule_id,omitempty" db:"rule_id"`
+	Name           string     `json:"name" db:"name"`
+	Description    *string    `json:"description,omitempty" db:"description"`
+	Severity       string     `json:"severity" db:"severity"`
+	Status         string     `json:"status" db:"status"`
+	TargetType     *string    `json:"target_type,omitempty" db:"target_type"`
+	TargetID       *uuid.UUID `json:"target_id,omitempty" db:"target_id"`
+	TriggeredAt    time.Time  `json:"triggered_at" db:"triggered_at"`
+	AcknowledgedAt *time.Time `json:"acknowledged_at,omitempty" db:"acknowledged_at"`
+	AcknowledgedBy *uuid.UUID `json:"acknowledged_by,omitempty" db:"acknowledged_by"`
+	ResolvedAt     *time.Time `json:"resolved_at,omitempty" db:"resolved_at"`
+	Metadata       *string    `json:"metadata,omitempty" db:"metadata"` // JSONB as string
 }

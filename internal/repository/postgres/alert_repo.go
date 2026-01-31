@@ -30,7 +30,7 @@ func (r *AlertRepo) GetByID(ctx context.Context, tenantID, alertID uuid.UUID) (*
 		FROM alerts
 		WHERE id = $1 AND tenant_id = $2
 	`
-	
+
 	alert := &models.Alert{}
 	err := r.db.QueryRowContext(ctx, query, alertID, tenantID).Scan(
 		&alert.ID, &alert.TenantID, &alert.RuleID, &alert.Name, &alert.Description,
@@ -38,11 +38,11 @@ func (r *AlertRepo) GetByID(ctx context.Context, tenantID, alertID uuid.UUID) (*
 		&alert.TriggeredAt, &alert.AcknowledgedAt, &alert.AcknowledgedBy,
 		&alert.ResolvedAt, &alert.Metadata,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("alert not found")
 	}
-	
+
 	return alert, err
 }
 
@@ -54,7 +54,7 @@ func (r *AlertRepo) List(ctx context.Context, tenantID uuid.UUID, opts repositor
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	offset := (opts.Page - 1) * opts.PageSize
 	query := `
 		SELECT id, tenant_id, rule_id, name, description, severity, status,
@@ -65,13 +65,13 @@ func (r *AlertRepo) List(ctx context.Context, tenantID uuid.UUID, opts repositor
 		ORDER BY triggered_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, tenantID, opts.PageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	alerts := make([]*models.Alert, 0)
 	for rows.Next() {
 		alert := &models.Alert{}
@@ -86,7 +86,7 @@ func (r *AlertRepo) List(ctx context.Context, tenantID uuid.UUID, opts repositor
 		}
 		alerts = append(alerts, alert)
 	}
-	
+
 	return alerts, total, rows.Err()
 }
 
@@ -97,21 +97,21 @@ func (r *AlertRepo) Acknowledge(ctx context.Context, tenantID, alertID, userID u
 		SET acknowledged_at = $1, acknowledged_by = $2
 		WHERE id = $3 AND tenant_id = $4
 	`
-	
+
 	now := time.Now()
 	result, err := r.db.ExecContext(ctx, query, now, userID, alertID, tenantID)
 	if err != nil {
 		return err
 	}
-	
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
-	
+
 	if rowsAffected == 0 {
 		return fmt.Errorf("alert not found")
 	}
-	
+
 	return nil
 }

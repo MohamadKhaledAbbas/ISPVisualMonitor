@@ -22,8 +22,8 @@ type TokenBlacklist interface {
 // InMemoryBlacklist implements TokenBlacklist using in-memory storage
 // Suitable for development and single-instance deployments
 type InMemoryBlacklist struct {
-	mu      sync.RWMutex
-	tokens  map[string]time.Time
+	mu     sync.RWMutex
+	tokens map[string]time.Time
 }
 
 // NewInMemoryBlacklist creates a new in-memory blacklist
@@ -31,10 +31,10 @@ func NewInMemoryBlacklist() *InMemoryBlacklist {
 	bl := &InMemoryBlacklist{
 		tokens: make(map[string]time.Time),
 	}
-	
+
 	// Start cleanup goroutine
 	go bl.cleanupLoop()
-	
+
 	return bl
 }
 
@@ -42,7 +42,7 @@ func NewInMemoryBlacklist() *InMemoryBlacklist {
 func (b *InMemoryBlacklist) Add(ctx context.Context, jti string, expiration time.Time) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	b.tokens[jti] = expiration
 	return nil
 }
@@ -51,17 +51,17 @@ func (b *InMemoryBlacklist) Add(ctx context.Context, jti string, expiration time
 func (b *InMemoryBlacklist) IsBlacklisted(ctx context.Context, jti string) (bool, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	expiration, exists := b.tokens[jti]
 	if !exists {
 		return false, nil
 	}
-	
+
 	// Check if token has expired (should have been cleaned up)
 	if time.Now().After(expiration) {
 		return false, nil
 	}
-	
+
 	return true, nil
 }
 
@@ -69,14 +69,14 @@ func (b *InMemoryBlacklist) IsBlacklisted(ctx context.Context, jti string) (bool
 func (b *InMemoryBlacklist) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	now := time.Now()
 	for jti, expiration := range b.tokens {
 		if now.After(expiration) {
 			delete(b.tokens, jti)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -84,7 +84,7 @@ func (b *InMemoryBlacklist) Cleanup(ctx context.Context) error {
 func (b *InMemoryBlacklist) cleanupLoop() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		_ = b.Cleanup(context.Background())
 	}

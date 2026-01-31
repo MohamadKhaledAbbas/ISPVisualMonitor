@@ -22,13 +22,13 @@ func (e *APIError) Error() string {
 
 // Predefined error codes
 var (
-	ErrNotFound       = &APIError{Code: "NOT_FOUND", Message: "Resource not found"}
-	ErrUnauthorized   = &APIError{Code: "UNAUTHORIZED", Message: "Authentication required"}
-	ErrForbidden      = &APIError{Code: "FORBIDDEN", Message: "Permission denied"}
-	ErrValidation     = &APIError{Code: "VALIDATION_ERROR", Message: "Validation failed"}
-	ErrInternal       = &APIError{Code: "INTERNAL_ERROR", Message: "Internal server error"}
-	ErrConflict       = &APIError{Code: "CONFLICT", Message: "Resource already exists"}
-	ErrBadRequest     = &APIError{Code: "BAD_REQUEST", Message: "Invalid request"}
+	ErrNotFound           = &APIError{Code: "NOT_FOUND", Message: "Resource not found"}
+	ErrUnauthorized       = &APIError{Code: "UNAUTHORIZED", Message: "Authentication required"}
+	ErrForbidden          = &APIError{Code: "FORBIDDEN", Message: "Permission denied"}
+	ErrValidation         = &APIError{Code: "VALIDATION_ERROR", Message: "Validation failed"}
+	ErrInternal           = &APIError{Code: "INTERNAL_ERROR", Message: "Internal server error"}
+	ErrConflict           = &APIError{Code: "CONFLICT", Message: "Resource already exists"}
+	ErrBadRequest         = &APIError{Code: "BAD_REQUEST", Message: "Invalid request"}
 	ErrInvalidCredentials = &APIError{Code: "INVALID_CREDENTIALS", Message: "Invalid email or password"}
 )
 
@@ -55,7 +55,7 @@ type ValidationError struct {
 // FormatValidationErrors converts validator errors to ValidationError slice
 func FormatValidationErrors(err error) []ValidationError {
 	var validationErrors []ValidationError
-	
+
 	if ve, ok := err.(validator.ValidationErrors); ok {
 		for _, fe := range ve {
 			validationErrors = append(validationErrors, ValidationError{
@@ -64,7 +64,7 @@ func FormatValidationErrors(err error) []ValidationError {
 			})
 		}
 	}
-	
+
 	return validationErrors
 }
 

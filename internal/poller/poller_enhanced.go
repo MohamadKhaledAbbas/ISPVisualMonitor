@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/database"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/poller/adapter"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/config"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/models"
+	"github.com/google/uuid"
 )
 
 // EnhancedService handles router polling using the adapter pattern
@@ -19,11 +19,11 @@ type EnhancedService struct {
 	db       *database.DB
 	config   config.PollerConfig
 	registry *adapter.Registry
-	
+
 	// Channels for work distribution
 	jobs    chan *models.EnhancedRouter
 	results chan *adapter.PollResult
-	
+
 	// Worker management
 	wg sync.WaitGroup
 }
@@ -36,7 +36,7 @@ func NewEnhancedService(db *database.DB, cfg config.PollerConfig) *EnhancedServi
 		RetryAttempts:  cfg.RetryAttempts,
 		RetryDelay:     2 * time.Second,
 	}
-	
+
 	return &EnhancedService{
 		db:       db,
 		config:   cfg,
@@ -50,32 +50,32 @@ func NewEnhancedService(db *database.DB, cfg config.PollerConfig) *EnhancedServi
 func (s *EnhancedService) Start(ctx context.Context) error {
 	log.Printf("Starting enhanced poller service with %d workers", s.config.WorkerCount)
 	log.Printf("Registered adapters: %v", s.registry.ListAdapters())
-	
+
 	// Start worker goroutines
 	for i := 0; i < s.config.WorkerCount; i++ {
 		s.wg.Add(1)
 		go s.worker(ctx, i)
 	}
-	
+
 	// Start result processor
 	s.wg.Add(1)
 	go s.resultProcessor(ctx)
-	
+
 	// Start job scheduler
 	s.wg.Add(1)
 	go s.scheduler(ctx)
-	
+
 	// Wait for context cancellation
 	<-ctx.Done()
 	log.Println("Enhanced poller service shutting down...")
-	
+
 	// Close channels
 	close(s.jobs)
-	
+
 	// Wait for workers to finish
 	s.wg.Wait()
 	close(s.results)
-	
+
 	log.Println("Enhanced poller service stopped")
 	return nil
 }
@@ -83,13 +83,13 @@ func (s *EnhancedService) Start(ctx context.Context) error {
 // scheduler periodically fetches routers that need polling
 func (s *EnhancedService) scheduler(ctx context.Context) {
 	defer s.wg.Done()
-	
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	// Run immediately on start
 	s.fetchAndScheduleRouters()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -117,22 +117,22 @@ func (s *EnhancedService) fetchAndScheduleRouters() {
 		ORDER BY r.last_polled_at NULLS FIRST
 		LIMIT $1
 	`
-	
+
 	rows, err := s.db.Query(query, s.config.ConcurrentPolls)
 	if err != nil {
 		log.Printf("Error querying routers: %v", err)
 		return
 	}
 	defer rows.Close()
-	
+
 	count := 0
 	for rows.Next() {
 		router := &models.EnhancedRouter{}
 		router.Capabilities = &models.RouterCapabilities{}
-		
+
 		var lastPolled *time.Time
 		var preferredMethod, fallbackOrder *string
-		
+
 		err := rows.Scan(
 			&router.ID,
 			&router.TenantID,
@@ -146,24 +146,24 @@ func (s *EnhancedService) fetchAndScheduleRouters() {
 			&preferredMethod,
 			&fallbackOrder,
 		)
-		
+
 		if err != nil {
 			log.Printf("Error scanning router: %v", err)
 			continue
 		}
-		
+
 		router.LastPolledAt = lastPolled
-		
+
 		if preferredMethod != nil {
 			router.Capabilities.PreferredMethod = *preferredMethod
 		}
-		
+
 		// Load full capabilities for this router
 		s.loadRouterCapabilities(router)
-		
+
 		// Load router roles
 		s.loadRouterRoles(router)
-		
+
 		// Send to job channel (non-blocking)
 		select {
 		case s.jobs <- router:
@@ -173,7 +173,7 @@ func (s *EnhancedService) fetchAndScheduleRouters() {
 			log.Printf("Job queue full, skipping router %s", router.Name)
 		}
 	}
-	
+
 	if count > 0 {
 		log.Printf("Scheduled %d routers for polling", count)
 	}
@@ -191,15 +191,15 @@ func (s *EnhancedService) loadRouterCapabilities(router *models.EnhancedRouter) 
 		FROM router_capabilities
 		WHERE router_id = $1
 	`
-	
+
 	capabilities := &models.RouterCapabilities{
 		SNMP: &models.SNMPCapability{},
 		API:  &models.APICapability{},
 		SSH:  &models.SSHCapability{},
 	}
-	
+
 	var fallbackOrder *string
-	
+
 	err := s.db.QueryRow(query, router.ID).Scan(
 		&capabilities.SNMP.Enabled,
 		&capabilities.SNMP.Version,
@@ -225,13 +225,13 @@ func (s *EnhancedService) loadRouterCapabilities(router *models.EnhancedRouter) 
 		&capabilities.PreferredMethod,
 		&fallbackOrder,
 	)
-	
+
 	if err != nil {
 		// If no capabilities found, router might be using legacy config
 		log.Printf("No capabilities found for router %s, using legacy config", router.Name)
 		return
 	}
-	
+
 	router.Capabilities = capabilities
 }
 
@@ -245,21 +245,21 @@ func (s *EnhancedService) loadRouterRoles(router *models.EnhancedRouter) {
 		WHERE rra.router_id = $1
 		ORDER BY rra.priority ASC
 	`
-	
+
 	rows, err := s.db.Query(query, router.ID)
 	if err != nil {
 		log.Printf("Error loading roles for router %s: %v", router.Name, err)
 		return
 	}
 	defer rows.Close()
-	
+
 	roles := []models.RouterRoleAssignment{}
-	
+
 	for rows.Next() {
 		rra := models.RouterRoleAssignment{
 			Role: &models.RouterRole{},
 		}
-		
+
 		err := rows.Scan(
 			&rra.ID,
 			&rra.RoleID,
@@ -269,24 +269,24 @@ func (s *EnhancedService) loadRouterRoles(router *models.EnhancedRouter) {
 			&rra.Role.Name,
 			&rra.Role.Category,
 		)
-		
+
 		if err != nil {
 			log.Printf("Error scanning role: %v", err)
 			continue
 		}
-		
+
 		roles = append(roles, rra)
 	}
-	
+
 	router.Roles = roles
 }
 
 // worker processes polling jobs
 func (s *EnhancedService) worker(ctx context.Context, id int) {
 	defer s.wg.Done()
-	
+
 	log.Printf("Enhanced poller worker %d started", id)
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -297,9 +297,9 @@ func (s *EnhancedService) worker(ctx context.Context, id int) {
 				log.Printf("Enhanced poller worker %d stopped (channel closed)", id)
 				return
 			}
-			
+
 			result := s.pollRouter(ctx, router)
-			
+
 			// Send result (non-blocking)
 			select {
 			case s.results <- result:
@@ -312,28 +312,28 @@ func (s *EnhancedService) worker(ctx context.Context, id int) {
 
 // pollRouter performs the actual polling using the adapter registry
 func (s *EnhancedService) pollRouter(ctx context.Context, router *models.EnhancedRouter) *adapter.PollResult {
-	log.Printf("Polling router: %s (%s) with roles: %v", 
+	log.Printf("Polling router: %s (%s) with roles: %v",
 		router.Name, router.ManagementIP, router.GetRoleCodes())
-	
+
 	// Record polling start
 	pollStartTime := time.Now()
-	
+
 	// Use registry to poll with fallback
 	result, err := s.registry.PollWithFallback(ctx, router)
-	
+
 	if err != nil {
 		log.Printf("Failed to poll router %s: %v", router.Name, err)
-		
+
 		// Create error result
 		result = adapter.NewPollResult(router.ID, router.TenantID, "none")
 		result.Success = false
 		result.ErrorMessage = err.Error()
 		result.ResponseTimeMs = int(time.Since(pollStartTime).Milliseconds())
 	}
-	
+
 	// Record polling in history
 	s.recordPollingHistory(result, pollStartTime, time.Now())
-	
+
 	return result
 }
 
@@ -345,7 +345,7 @@ func (s *EnhancedService) recordPollingHistory(result *adapter.PollResult, start
 			adapter_used, success, error_message, metrics_collected, response_time_ms
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
-	
+
 	_, err := s.db.Exec(
 		query,
 		result.TenantID,
@@ -358,7 +358,7 @@ func (s *EnhancedService) recordPollingHistory(result *adapter.PollResult, start
 		result.GetMetricsCount(),
 		result.ResponseTimeMs,
 	)
-	
+
 	if err != nil {
 		log.Printf("Error recording polling history: %v", err)
 	}
@@ -367,9 +367,9 @@ func (s *EnhancedService) recordPollingHistory(result *adapter.PollResult, start
 // resultProcessor handles polling results
 func (s *EnhancedService) resultProcessor(ctx context.Context) {
 	defer s.wg.Done()
-	
+
 	log.Println("Enhanced result processor started")
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -380,7 +380,7 @@ func (s *EnhancedService) resultProcessor(ctx context.Context) {
 				log.Println("Enhanced result processor stopped (channel closed)")
 				return
 			}
-			
+
 			if result.Success {
 				s.handleSuccessfulPoll(result)
 			} else {
@@ -398,33 +398,33 @@ func (s *EnhancedService) handleSuccessfulPoll(result *adapter.PollResult) {
 		result.Timestamp,
 		result.RouterID,
 	)
-	
+
 	if err != nil {
 		log.Printf("Error updating router poll timestamp: %v", err)
 	}
-	
+
 	// Store router metrics
 	s.storeRouterMetrics(result)
-	
+
 	// Store interface metrics
 	s.storeInterfaceMetrics(result)
-	
+
 	// Store PPPoE sessions
 	if len(result.PPPoESessions) > 0 {
 		s.storePPPoESessions(result)
 	}
-	
+
 	// Store NAT sessions
 	if len(result.NATSessions) > 0 {
 		s.storeNATSessions(result)
 	}
-	
+
 	// Store DHCP leases
 	if len(result.DHCPLeases) > 0 {
 		s.storeDHCPLeases(result)
 	}
-	
-	log.Printf("Successfully polled router %s with %d metrics", 
+
+	log.Printf("Successfully polled router %s with %d metrics",
 		result.RouterID, result.GetMetricsCount())
 }
 
@@ -436,12 +436,12 @@ func (s *EnhancedService) storeRouterMetrics(result *adapter.PollResult) {
 			cpu_percent, memory_percent, uptime_seconds, temperature_celsius
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	
+
 	cpuPercent, _ := result.Metrics["cpu_percent"].(float64)
 	memoryPercent, _ := result.Metrics["memory_percent"].(float64)
 	uptimeSeconds, _ := result.Metrics["uptime_seconds"].(int64)
 	temperatureCelsius, _ := result.Metrics["temperature_celsius"].(float64)
-	
+
 	_, err := s.db.Exec(
 		query,
 		result.TenantID,
@@ -452,7 +452,7 @@ func (s *EnhancedService) storeRouterMetrics(result *adapter.PollResult) {
 		uptimeSeconds,
 		temperatureCelsius,
 	)
-	
+
 	if err != nil {
 		log.Printf("Error storing router metrics: %v", err)
 	}
@@ -487,7 +487,7 @@ func (s *EnhancedService) storeDHCPLeases(result *adapter.PollResult) {
 // handleFailedPoll processes a failed polling result
 func (s *EnhancedService) handleFailedPoll(result *adapter.PollResult) {
 	log.Printf("Failed to poll router %s: %s", result.RouterID, result.ErrorMessage)
-	
+
 	// TODO: Create alert for failed polling
 	// TODO: Update router status if consecutive failures exceed threshold
 }
@@ -500,18 +500,18 @@ func (s *EnhancedService) PollNow(routerID uuid.UUID) error {
 		"SELECT id, tenant_id, name, management_ip FROM routers WHERE id = $1",
 		routerID,
 	).Scan(&router.ID, &router.TenantID, &router.Name, &router.ManagementIP)
-	
+
 	if err != nil {
 		return fmt.Errorf("router not found: %w", err)
 	}
-	
+
 	// Load capabilities and roles
 	s.loadRouterCapabilities(router)
 	s.loadRouterRoles(router)
-	
+
 	// Send to job channel
 	s.jobs <- router
-	
+
 	return nil
 }
 

@@ -34,11 +34,11 @@ func main() {
 
 	// Initialize router poller service
 	pollerService := poller.NewService(db, cfg.Poller)
-	
+
 	// Start poller in background
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	go func() {
 		log.Println("Starting router poller service...")
 		if err := pollerService.Start(ctx); err != nil {
@@ -48,7 +48,7 @@ func main() {
 
 	// Initialize API server
 	apiServer := api.NewServer(db, cfg.API, cfg.Auth)
-	
+
 	// Start HTTP server
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.API.Port),

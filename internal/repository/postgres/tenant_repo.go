@@ -29,21 +29,21 @@ func (r *TenantRepo) Create(ctx context.Context, tenant *models.Tenant) error {
 			created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
-	
+
 	now := time.Now()
 	tenant.CreatedAt = now
 	tenant.UpdatedAt = now
-	
+
 	if tenant.ID == uuid.Nil {
 		tenant.ID = uuid.New()
 	}
-	
+
 	_, err := r.db.ExecContext(ctx, query,
 		tenant.ID, tenant.Name, tenant.Slug, tenant.ContactEmail, tenant.ContactPhone,
 		tenant.SubscriptionTier, tenant.MaxDevices, tenant.MaxUsers, tenant.Status,
 		tenant.TrialEndsAt, tenant.CreatedAt, tenant.UpdatedAt,
 	)
-	
+
 	return err
 }
 
@@ -55,18 +55,18 @@ func (r *TenantRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Tenant,
 		FROM tenants
 		WHERE id = $1
 	`
-	
+
 	tenant := &models.Tenant{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&tenant.ID, &tenant.Name, &tenant.Slug, &tenant.ContactEmail, &tenant.ContactPhone,
 		&tenant.SubscriptionTier, &tenant.MaxDevices, &tenant.MaxUsers, &tenant.Status,
 		&tenant.TrialEndsAt, &tenant.CreatedAt, &tenant.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("tenant not found")
 	}
-	
+
 	return tenant, err
 }
 
@@ -78,18 +78,18 @@ func (r *TenantRepo) GetBySlug(ctx context.Context, slug string) (*models.Tenant
 		FROM tenants
 		WHERE slug = $1
 	`
-	
+
 	tenant := &models.Tenant{}
 	err := r.db.QueryRowContext(ctx, query, slug).Scan(
 		&tenant.ID, &tenant.Name, &tenant.Slug, &tenant.ContactEmail, &tenant.ContactPhone,
 		&tenant.SubscriptionTier, &tenant.MaxDevices, &tenant.MaxUsers, &tenant.Status,
 		&tenant.TrialEndsAt, &tenant.CreatedAt, &tenant.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("tenant not found")
 	}
-	
+
 	return tenant, err
 }
 
@@ -101,7 +101,7 @@ func (r *TenantRepo) List(ctx context.Context, opts repository.ListOptions) ([]*
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	offset := (opts.Page - 1) * opts.PageSize
 	query := `
 		SELECT id, name, slug, contact_email, contact_phone, subscription_tier, 
@@ -110,13 +110,13 @@ func (r *TenantRepo) List(ctx context.Context, opts repository.ListOptions) ([]*
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, opts.PageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	tenants := make([]*models.Tenant, 0)
 	for rows.Next() {
 		tenant := &models.Tenant{}
@@ -130,7 +130,7 @@ func (r *TenantRepo) List(ctx context.Context, opts repository.ListOptions) ([]*
 		}
 		tenants = append(tenants, tenant)
 	}
-	
+
 	return tenants, total, rows.Err()
 }
 
@@ -143,16 +143,16 @@ func (r *TenantRepo) Update(ctx context.Context, tenant *models.Tenant) error {
 			status = $8, trial_ends_at = $9, updated_at = $10
 		WHERE id = $11
 	`
-	
+
 	tenant.UpdatedAt = time.Now()
-	
+
 	_, err := r.db.ExecContext(ctx, query,
 		tenant.Name, tenant.Slug, tenant.ContactEmail, tenant.ContactPhone,
 		tenant.SubscriptionTier, tenant.MaxDevices, tenant.MaxUsers,
 		tenant.Status, tenant.TrialEndsAt, tenant.UpdatedAt,
 		tenant.ID,
 	)
-	
+
 	return err
 }
 

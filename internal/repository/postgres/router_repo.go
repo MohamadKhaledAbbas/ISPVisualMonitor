@@ -30,15 +30,15 @@ func (r *RouterRepo) Create(ctx context.Context, router *models.Router) error {
 			snmp_port, description, created_at, updated_at, last_polled_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 	`
-	
+
 	now := time.Now()
 	router.CreatedAt = now
 	router.UpdatedAt = now
-	
+
 	if router.ID == uuid.Nil {
 		router.ID = uuid.New()
 	}
-	
+
 	_, err := r.db.ExecContext(ctx, query,
 		router.ID, router.TenantID, router.POPID, router.Name, router.Hostname,
 		router.ManagementIP, router.Location, router.RouterType, router.Vendor,
@@ -47,7 +47,7 @@ func (r *RouterRepo) Create(ctx context.Context, router *models.Router) error {
 		router.SNMPCommunity, router.SNMPPort, router.Description,
 		router.CreatedAt, router.UpdatedAt, router.LastPolledAt,
 	)
-	
+
 	return err
 }
 
@@ -61,7 +61,7 @@ func (r *RouterRepo) GetByID(ctx context.Context, tenantID, routerID uuid.UUID) 
 		FROM routers
 		WHERE id = $1 AND tenant_id = $2
 	`
-	
+
 	router := &models.Router{}
 	err := r.db.QueryRowContext(ctx, query, routerID, tenantID).Scan(
 		&router.ID, &router.TenantID, &router.POPID, &router.Name, &router.Hostname,
@@ -71,11 +71,11 @@ func (r *RouterRepo) GetByID(ctx context.Context, tenantID, routerID uuid.UUID) 
 		&router.SNMPCommunity, &router.SNMPPort, &router.Description,
 		&router.CreatedAt, &router.UpdatedAt, &router.LastPolledAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("router not found")
 	}
-	
+
 	return router, err
 }
 
@@ -87,7 +87,7 @@ func (r *RouterRepo) List(ctx context.Context, tenantID uuid.UUID, opts reposito
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	offset := (opts.Page - 1) * opts.PageSize
 	query := `
 		SELECT id, tenant_id, pop_id, name, hostname, management_ip, location,
@@ -99,13 +99,13 @@ func (r *RouterRepo) List(ctx context.Context, tenantID uuid.UUID, opts reposito
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, tenantID, opts.PageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	routers := make([]*models.Router, 0)
 	for rows.Next() {
 		router := &models.Router{}
@@ -122,7 +122,7 @@ func (r *RouterRepo) List(ctx context.Context, tenantID uuid.UUID, opts reposito
 		}
 		routers = append(routers, router)
 	}
-	
+
 	return routers, total, rows.Err()
 }
 
@@ -137,9 +137,9 @@ func (r *RouterRepo) Update(ctx context.Context, router *models.Router) error {
 			updated_at = $18, last_polled_at = $19
 		WHERE id = $20 AND tenant_id = $21
 	`
-	
+
 	router.UpdatedAt = time.Now()
-	
+
 	_, err := r.db.ExecContext(ctx, query,
 		router.POPID, router.Name, router.Hostname, router.ManagementIP, router.Location,
 		router.RouterType, router.Vendor, router.Model, router.OSVersion, router.SerialNumber,
@@ -148,7 +148,7 @@ func (r *RouterRepo) Update(ctx context.Context, router *models.Router) error {
 		router.UpdatedAt, router.LastPolledAt,
 		router.ID, router.TenantID,
 	)
-	
+
 	return err
 }
 

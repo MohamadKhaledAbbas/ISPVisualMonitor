@@ -29,16 +29,16 @@ const (
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Generate request ID
 		requestID := uuid.New().String()
 		ctx := context.WithValue(r.Context(), RequestIDKey, requestID)
-		
+
 		// Log request
 		log.Printf("[%s] %s %s - Started", requestID, r.Method, r.URL.Path)
-		
+
 		next.ServeHTTP(w, r.WithContext(ctx))
-		
+
 		// Log completion
 		duration := time.Since(start)
 		log.Printf("[%s] %s %s - Completed in %v", requestID, r.Method, r.URL.Path, duration)
@@ -50,7 +50,7 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
-			
+
 			// Check if origin is allowed
 			allowed := false
 			for _, allowedOrigin := range allowedOrigins {
@@ -59,20 +59,20 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 					break
 				}
 			}
-			
+
 			if allowed {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
-			
+
 			// Handle preflight requests
 			if r.Method == "OPTIONS" {
 				w.WriteHeader(http.StatusOK)
 				return
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -99,16 +99,16 @@ func Auth(provider auth.AuthProvider) func(http.Handler) http.Handler {
 				respondWithError(w, http.StatusUnauthorized, "Authorization header required")
 				return
 			}
-			
+
 			// Check if it's a Bearer token
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
 				respondWithError(w, http.StatusUnauthorized, "Invalid authorization header format")
 				return
 			}
-			
+
 			tokenString := parts[1]
-			
+
 			// Validate token using provider
 			claims, err := provider.ValidateToken(r.Context(), tokenString)
 			if err != nil {
@@ -122,12 +122,12 @@ func Auth(provider auth.AuthProvider) func(http.Handler) http.Handler {
 				}
 				return
 			}
-			
+
 			// Inject claims into context
 			ctx := context.WithValue(r.Context(), ClaimsKey, claims)
 			ctx = context.WithValue(ctx, TenantIDKey, claims.TenantID)
 			ctx = context.WithValue(ctx, UserIDKey, claims.UserID)
-			
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -148,10 +148,10 @@ func TenantContext(next http.Handler) http.Handler {
 			http.Error(w, "Tenant context not found", http.StatusInternalServerError)
 			return
 		}
-		
+
 		// TODO: Set PostgreSQL session variable for RLS
 		// db.Exec("SET app.current_tenant = $1", tenantID)
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -165,7 +165,7 @@ func RequirePermission(permission string) func(http.Handler) http.Handler {
 			// 2. Load user permissions from cache or database
 			// 3. Check if permission exists
 			// 4. Allow or deny request
-			
+
 			// For now, allow all requests
 			next.ServeHTTP(w, r)
 		})

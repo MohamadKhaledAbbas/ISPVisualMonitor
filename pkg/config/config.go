@@ -37,11 +37,11 @@ type DatabaseConfig struct {
 
 // PollerConfig holds router poller configuration
 type PollerConfig struct {
-	WorkerCount      int
-	DefaultInterval  int // seconds
-	TimeoutSeconds   int
-	RetryAttempts    int
-	ConcurrentPolls  int
+	WorkerCount     int
+	DefaultInterval int // seconds
+	TimeoutSeconds  int
+	RetryAttempts   int
+	ConcurrentPolls int
 }
 
 // AuthConfig holds authentication configuration
@@ -55,12 +55,12 @@ type AuthConfig struct {
 	RefreshTokenTTL  time.Duration // Refresh token expiration time
 	Issuer           string        // JWT issuer identifier
 	BcryptCost       int           // Bcrypt cost for password hashing
-	
+
 	// For external OIDC providers (Keycloak, Auth0, etc.)
 	OIDCIssuerURL    string
 	OIDCClientID     string
 	OIDCClientSecret string
-	
+
 	// Legacy fields (deprecated, but kept for backward compatibility)
 	TokenExpiry        int // minutes (deprecated - use AccessTokenTTL)
 	RefreshTokenExpiry int // days (deprecated - use RefreshTokenTTL)
@@ -86,11 +86,11 @@ func Load() (*Config, error) {
 			MinConns: getEnvInt("DB_MIN_CONNS", 5),
 		},
 		Poller: PollerConfig{
-			WorkerCount:      getEnvInt("POLLER_WORKERS", 10),
-			DefaultInterval:  getEnvInt("POLLER_INTERVAL", 300),
-			TimeoutSeconds:   getEnvInt("POLLER_TIMEOUT", 30),
-			RetryAttempts:    getEnvInt("POLLER_RETRY", 3),
-			ConcurrentPolls:  getEnvInt("POLLER_CONCURRENT", 50),
+			WorkerCount:     getEnvInt("POLLER_WORKERS", 10),
+			DefaultInterval: getEnvInt("POLLER_INTERVAL", 300),
+			TimeoutSeconds:  getEnvInt("POLLER_TIMEOUT", 30),
+			RetryAttempts:   getEnvInt("POLLER_RETRY", 3),
+			ConcurrentPolls: getEnvInt("POLLER_CONCURRENT", 50),
 		},
 		Auth: AuthConfig{
 			Provider:         getEnv("AUTH_PROVIDER", "local"),
@@ -102,12 +102,12 @@ func Load() (*Config, error) {
 			RefreshTokenTTL:  getEnvDuration("REFRESH_TOKEN_TTL", 168*time.Hour), // 7 days
 			Issuer:           getEnv("JWT_ISSUER", "ispvisualmonitor"),
 			BcryptCost:       getEnvInt("BCRYPT_COST", 12),
-			
+
 			// OIDC configuration
 			OIDCIssuerURL:    getEnv("OIDC_ISSUER_URL", ""),
 			OIDCClientID:     getEnv("OIDC_CLIENT_ID", ""),
 			OIDCClientSecret: getEnv("OIDC_CLIENT_SECRET", ""),
-			
+
 			// Legacy fields for backward compatibility
 			TokenExpiry:        getEnvInt("TOKEN_EXPIRY_MIN", 60),
 			RefreshTokenExpiry: getEnvInt("REFRESH_TOKEN_EXPIRY_DAYS", 7),

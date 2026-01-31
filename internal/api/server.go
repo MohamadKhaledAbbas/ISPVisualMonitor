@@ -25,7 +25,7 @@ type Server struct {
 	router       *mux.Router
 	authProvider auth.AuthProvider
 	logger       *zap.Logger
-	
+
 	// Handlers
 	authHandler      *handlers.AuthHandler
 	routerHandler    *handlers.RouterHandler

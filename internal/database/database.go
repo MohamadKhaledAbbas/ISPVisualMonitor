@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/config"
+	_ "github.com/lib/pq"
 )
 
 // DB wraps the database connection
@@ -18,7 +18,7 @@ type DB struct {
 // NewConnection creates a new database connection
 func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
 	connStr := cfg.ConnectionString()
-	
+
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
