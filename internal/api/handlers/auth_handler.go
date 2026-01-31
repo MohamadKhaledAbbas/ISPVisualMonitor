@@ -1,0 +1,117 @@
+package handlers
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/dto"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api/utils"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/service"
+	"github.com/go-playground/validator/v10"
+)
+
+type AuthHandler struct {
+	authService *service.AuthService
+	validator   *validator.Validate
+}
+
+func NewAuthHandler(authService *service.AuthService, validator *validator.Validate) *AuthHandler {
+	return &AuthHandler{
+		authService: authService,
+		validator:   validator,
+	}
+}
+
+func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	var req dto.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid request body"))
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		utils.RespondValidationError(w, err)
+		return
+	}
+
+	resp, err := h.authService.Login(r.Context(), &req)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid credentials") {
+			utils.RespondError(w, http.StatusUnauthorized, utils.ErrInvalidCredentials)
+			return
+		}
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
+		return
+	}
+
+	utils.RespondJSON(w, http.StatusOK, resp)
+}
+
+func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	var req dto.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid request body"))
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		utils.RespondValidationError(w, err)
+		return
+	}
+
+	resp, err := h.authService.Register(r.Context(), &req)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			utils.RespondError(w, http.StatusConflict, utils.ErrConflict.WithDetails("User already exists"))
+			return
+		}
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
+		return
+	}
+
+	utils.RespondCreated(w, resp)
+}
+
+func (h *AuthHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
+	var req dto.RefreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, utils.ErrBadRequest.WithDetails("Invalid request body"))
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		utils.RespondValidationError(w, err)
+		return
+	}
+
+	resp, err := h.authService.RefreshToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		utils.RespondError(w, http.StatusUnauthorized, utils.ErrUnauthorized.WithDetails("Invalid refresh token"))
+		return
+	}
+
+	utils.RespondJSON(w, http.StatusOK, resp)
+}
+
+func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		utils.RespondError(w, http.StatusUnauthorized, utils.ErrUnauthorized.WithDetails("Authorization header required"))
+		return
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		utils.RespondError(w, http.StatusUnauthorized, utils.ErrUnauthorized.WithDetails("Invalid authorization header format"))
+		return
+	}
+
+	token := parts[1]
+	if err := h.authService.Logout(r.Context(), token); err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, utils.ErrInternal)
+		return
+	}
+
+	utils.RespondNoContent(w)
+}

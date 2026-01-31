@@ -53,14 +53,14 @@ func (a *SNMPAdapter) GetSupportedMetrics() []string {
 func (a *SNMPAdapter) Poll(ctx context.Context, router *models.EnhancedRouter) (*PollResult, error) {
 	startTime := time.Now()
 	result := NewPollResult(router.ID, router.TenantID, a.GetAdapterName())
-	
+
 	// Create SNMP client
 	client, err := a.createSNMPClient(router)
 	if err != nil {
 		result.ErrorMessage = fmt.Sprintf("Failed to create SNMP client: %v", err)
 		return result, err
 	}
-	
+
 	// Connect to SNMP agent
 	err = client.Connect()
 	if err != nil {
@@ -68,21 +68,21 @@ func (a *SNMPAdapter) Poll(ctx context.Context, router *models.EnhancedRouter) (
 		return result, err
 	}
 	defer client.Conn.Close()
-	
+
 	// Poll system information
 	if err := a.pollSystemInfo(client, result); err != nil {
 		log.Printf("Warning: Failed to poll system info: %v", err)
 	}
-	
+
 	// Poll interface statistics
 	if err := a.pollInterfaces(client, result); err != nil {
 		log.Printf("Warning: Failed to poll interfaces: %v", err)
 	}
-	
+
 	// Calculate response time
 	result.ResponseTimeMs = int(time.Since(startTime).Milliseconds())
 	result.Success = true
-	
+
 	return result, nil
 }
 
@@ -92,24 +92,24 @@ func (a *SNMPAdapter) HealthCheck(ctx context.Context, router *models.EnhancedRo
 	if err != nil {
 		return err
 	}
-	
+
 	err = client.Connect()
 	if err != nil {
 		return err
 	}
 	defer client.Conn.Close()
-	
+
 	// Try to get system description (1.3.6.1.2.1.1.1.0)
 	oids := []string{"1.3.6.1.2.1.1.1.0"}
 	result, err := client.Get(oids)
 	if err != nil {
 		return err
 	}
-	
+
 	if len(result.Variables) == 0 {
 		return fmt.Errorf("no SNMP response")
 	}
-	
+
 	return nil
 }
 
@@ -118,9 +118,9 @@ func (a *SNMPAdapter) createSNMPClient(router *models.EnhancedRouter) (*gosnmp.G
 	if router.Capabilities == nil || router.Capabilities.SNMP == nil {
 		return nil, fmt.Errorf("SNMP not configured")
 	}
-	
+
 	snmpCfg := router.Capabilities.SNMP
-	
+
 	client := &gosnmp.GoSNMP{
 		Target:    router.ManagementIP,
 		Port:      uint16(snmpCfg.Port),
@@ -128,7 +128,7 @@ func (a *SNMPAdapter) createSNMPClient(router *models.EnhancedRouter) (*gosnmp.G
 		Retries:   snmpCfg.Retries,
 		Transport: "udp",
 	}
-	
+
 	// Configure based on version
 	switch snmpCfg.Version {
 	case "v1":
@@ -146,11 +146,11 @@ func (a *SNMPAdapter) createSNMPClient(router *models.EnhancedRouter) (*gosnmp.G
 		if snmpCfg.V3Username != nil {
 			client.SecurityModel = gosnmp.UserSecurityModel
 			client.MsgFlags = gosnmp.AuthPriv
-			
+
 			params := &gosnmp.UsmSecurityParameters{
 				UserName: *snmpCfg.V3Username,
 			}
-			
+
 			// Set authentication
 			if snmpCfg.V3AuthProtocol != nil && snmpCfg.V3AuthPassword != nil {
 				params.AuthenticationPassphrase = *snmpCfg.V3AuthPassword
@@ -169,7 +169,7 @@ func (a *SNMPAdapter) createSNMPClient(router *models.EnhancedRouter) (*gosnmp.G
 					params.AuthenticationProtocol = gosnmp.SHA512
 				}
 			}
-			
+
 			// Set privacy
 			if snmpCfg.V3PrivProtocol != nil && snmpCfg.V3PrivPassword != nil {
 				params.PrivacyPassphrase = *snmpCfg.V3PrivPassword
@@ -184,13 +184,13 @@ func (a *SNMPAdapter) createSNMPClient(router *models.EnhancedRouter) (*gosnmp.G
 					params.PrivacyProtocol = gosnmp.AES256
 				}
 			}
-			
+
 			client.SecurityParameters = params
 		}
 	default:
 		return nil, fmt.Errorf("unsupported SNMP version: %s", snmpCfg.Version)
 	}
-	
+
 	return client, nil
 }
 
@@ -198,17 +198,17 @@ func (a *SNMPAdapter) createSNMPClient(router *models.EnhancedRouter) (*gosnmp.G
 func (a *SNMPAdapter) pollSystemInfo(client *gosnmp.GoSNMP, result *PollResult) error {
 	// Standard System MIB OIDs
 	oids := []string{
-		"1.3.6.1.2.1.1.1.0",  // sysDescr
-		"1.3.6.1.2.1.1.3.0",  // sysUpTime
-		"1.3.6.1.2.1.1.5.0",  // sysName
+		"1.3.6.1.2.1.1.1.0",    // sysDescr
+		"1.3.6.1.2.1.1.3.0",    // sysUpTime
+		"1.3.6.1.2.1.1.5.0",    // sysName
 		"1.3.6.1.2.1.25.1.5.0", // hrSystemUptime (if available)
 	}
-	
+
 	response, err := client.Get(oids)
 	if err != nil {
 		return err
 	}
-	
+
 	for _, variable := range response.Variables {
 		switch variable.Name {
 		case "1.3.6.1.2.1.1.1.0":
@@ -221,7 +221,7 @@ func (a *SNMPAdapter) pollSystemInfo(client *gosnmp.GoSNMP, result *PollResult) 
 			result.Metrics["system_name"] = fmt.Sprintf("%s", variable.Value)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -232,17 +232,17 @@ func (a *SNMPAdapter) pollInterfaces(client *gosnmp.GoSNMP, result *PollResult) 
 	// 1. First walk ifIndex to get all interface indices
 	// 2. Then bulk get all stats for each interface
 	// 3. Calculate rates from previous polls
-	
+
 	// For now, just get basic interface count
 	oids := []string{
 		"1.3.6.1.2.1.2.1.0", // ifNumber
 	}
-	
+
 	response, err := client.Get(oids)
 	if err != nil {
 		return err
 	}
-	
+
 	for _, variable := range response.Variables {
 		if variable.Name == "1.3.6.1.2.1.2.1.0" {
 			if ifCount, ok := variable.Value.(int); ok {
@@ -250,7 +250,7 @@ func (a *SNMPAdapter) pollInterfaces(client *gosnmp.GoSNMP, result *PollResult) 
 			}
 		}
 	}
-	
+
 	// TODO: Implement full interface statistics collection
 	// This would include walking:
 	// - ifDescr (1.3.6.1.2.1.2.2.1.2)
@@ -258,6 +258,6 @@ func (a *SNMPAdapter) pollInterfaces(client *gosnmp.GoSNMP, result *PollResult) 
 	// - ifInOctets (1.3.6.1.2.1.2.2.1.10)
 	// - ifOutOctets (1.3.6.1.2.1.2.2.1.16)
 	// - etc.
-	
+
 	return nil
 }

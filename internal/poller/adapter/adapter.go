@@ -12,37 +12,37 @@ import (
 type PollerAdapter interface {
 	// GetAdapterName returns the name of this adapter (e.g., "snmp", "mikrotik_api")
 	GetAdapterName() string
-	
+
 	// CanHandle determines if this adapter can handle polling for the given router
 	CanHandle(router *models.EnhancedRouter) bool
-	
+
 	// Poll performs the actual polling operation and returns results
 	Poll(ctx context.Context, router *models.EnhancedRouter) (*PollResult, error)
-	
+
 	// HealthCheck tests connectivity to the router without full polling
 	HealthCheck(ctx context.Context, router *models.EnhancedRouter) error
-	
+
 	// GetSupportedMetrics returns the list of metric types this adapter can collect
 	GetSupportedMetrics() []string
 }
 
 // PollResult represents the result of a polling operation
 type PollResult struct {
-	RouterID    uuid.UUID              `json:"router_id"`
-	TenantID    uuid.UUID              `json:"tenant_id"`
-	Success     bool                   `json:"success"`
-	AdapterUsed string                 `json:"adapter_used"`
-	Timestamp   time.Time              `json:"timestamp"`
-	
+	RouterID    uuid.UUID `json:"router_id"`
+	TenantID    uuid.UUID `json:"tenant_id"`
+	Success     bool      `json:"success"`
+	AdapterUsed string    `json:"adapter_used"`
+	Timestamp   time.Time `json:"timestamp"`
+
 	// Generic metrics
 	Metrics map[string]interface{} `json:"metrics"`
-	
+
 	// Role-specific data
 	PPPoESessions []models.PPPoESession `json:"pppoe_sessions,omitempty"`
 	NATSessions   []models.NATSession   `json:"nat_sessions,omitempty"`
 	DHCPLeases    []models.DHCPLease    `json:"dhcp_leases,omitempty"`
 	Interfaces    []InterfaceStatus     `json:"interfaces,omitempty"`
-	
+
 	// Performance metrics
 	ResponseTimeMs int    `json:"response_time_ms"`
 	ErrorMessage   string `json:"error_message,omitempty"`
@@ -50,21 +50,21 @@ type PollResult struct {
 
 // InterfaceStatus represents the status and metrics of a network interface
 type InterfaceStatus struct {
-	Name              string  `json:"name"`
-	Description       string  `json:"description,omitempty"`
-	IfIndex           int     `json:"if_index,omitempty"`
-	Status            string  `json:"status"`           // up, down, admin-down
-	AdminStatus       string  `json:"admin_status"`     // up, down
-	Speed             int64   `json:"speed_mbps,omitempty"`
-	MTU               int     `json:"mtu,omitempty"`
-	InOctets          int64   `json:"in_octets"`
-	OutOctets         int64   `json:"out_octets"`
-	InPackets         int64   `json:"in_packets"`
-	OutPackets        int64   `json:"out_packets"`
-	InErrors          int64   `json:"in_errors"`
-	OutErrors         int64   `json:"out_errors"`
-	InDiscards        int64   `json:"in_discards"`
-	OutDiscards       int64   `json:"out_discards"`
+	Name               string  `json:"name"`
+	Description        string  `json:"description,omitempty"`
+	IfIndex            int     `json:"if_index,omitempty"`
+	Status             string  `json:"status"`       // up, down, admin-down
+	AdminStatus        string  `json:"admin_status"` // up, down
+	Speed              int64   `json:"speed_mbps,omitempty"`
+	MTU                int     `json:"mtu,omitempty"`
+	InOctets           int64   `json:"in_octets"`
+	OutOctets          int64   `json:"out_octets"`
+	InPackets          int64   `json:"in_packets"`
+	OutPackets         int64   `json:"out_packets"`
+	InErrors           int64   `json:"in_errors"`
+	OutErrors          int64   `json:"out_errors"`
+	InDiscards         int64   `json:"in_discards"`
+	OutDiscards        int64   `json:"out_discards"`
 	UtilizationPercent float64 `json:"utilization_percent,omitempty"`
 }
 
@@ -81,13 +81,13 @@ type SystemMetrics struct {
 
 // PPPoEMetrics represents PPPoE server specific metrics
 type PPPoEMetrics struct {
-	TotalSessions       int     `json:"total_sessions"`
-	ActiveSessions      int     `json:"active_sessions"`
-	MaxSessions         int     `json:"max_sessions"`
-	AuthSuccesses       int64   `json:"auth_successes"`
-	AuthFailures        int64   `json:"auth_failures"`
-	ThroughputInMbps    float64 `json:"throughput_in_mbps"`
-	ThroughputOutMbps   float64 `json:"throughput_out_mbps"`
+	TotalSessions     int     `json:"total_sessions"`
+	ActiveSessions    int     `json:"active_sessions"`
+	MaxSessions       int     `json:"max_sessions"`
+	AuthSuccesses     int64   `json:"auth_successes"`
+	AuthFailures      int64   `json:"auth_failures"`
+	ThroughputInMbps  float64 `json:"throughput_in_mbps"`
+	ThroughputOutMbps float64 `json:"throughput_out_mbps"`
 }
 
 // NATMetrics represents NAT gateway specific metrics
@@ -118,16 +118,16 @@ func DefaultAdapterConfig() AdapterConfig {
 // NewPollResult creates a new PollResult with default values
 func NewPollResult(routerID, tenantID uuid.UUID, adapterName string) *PollResult {
 	return &PollResult{
-		RouterID:       routerID,
-		TenantID:       tenantID,
-		Success:        false,
-		AdapterUsed:    adapterName,
-		Timestamp:      time.Now(),
-		Metrics:        make(map[string]interface{}),
-		PPPoESessions:  []models.PPPoESession{},
-		NATSessions:    []models.NATSession{},
-		DHCPLeases:     []models.DHCPLease{},
-		Interfaces:     []InterfaceStatus{},
+		RouterID:      routerID,
+		TenantID:      tenantID,
+		Success:       false,
+		AdapterUsed:   adapterName,
+		Timestamp:     time.Now(),
+		Metrics:       make(map[string]interface{}),
+		PPPoESessions: []models.PPPoESession{},
+		NATSessions:   []models.NATSession{},
+		DHCPLeases:    []models.DHCPLease{},
+		Interfaces:    []InterfaceStatus{},
 	}
 }
 

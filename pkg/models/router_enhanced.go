@@ -6,10 +6,10 @@ import (
 
 // EnhancedRouter extends the base Router with capabilities and roles
 type EnhancedRouter struct {
-	Router                                    // Embedded base router
-	Capabilities *RouterCapabilities          `json:"capabilities,omitempty"`
-	Roles        []RouterRoleAssignment       `json:"roles,omitempty"`
-	Dependencies []RouterDependency           `json:"dependencies,omitempty"`
+	Router                              // Embedded base router
+	Capabilities *RouterCapabilities    `json:"capabilities,omitempty"`
+	Roles        []RouterRoleAssignment `json:"roles,omitempty"`
+	Dependencies []RouterDependency     `json:"dependencies,omitempty"`
 }
 
 // GetPrimaryRole returns the primary role assignment for this router
@@ -128,12 +128,12 @@ func (er *EnhancedRouter) GetPollingMethodOrder() []string {
 // GetMetricTypesToCollect returns metric types based on assigned roles
 func (er *EnhancedRouter) GetMetricTypesToCollect() []string {
 	metricsMap := make(map[string]bool)
-	
+
 	// Always collect basic metrics
 	metricsMap["interface_metrics"] = true
 	metricsMap["cpu_usage"] = true
 	metricsMap["memory_usage"] = true
-	
+
 	// Add role-specific metrics
 	for _, role := range er.Roles {
 		if role.Role != nil {
@@ -143,23 +143,23 @@ func (er *EnhancedRouter) GetMetricTypesToCollect() []string {
 			}
 		}
 	}
-	
+
 	// Convert map to slice
 	metrics := make([]string, 0, len(metricsMap))
 	for metric := range metricsMap {
 		metrics = append(metrics, metric)
 	}
-	
+
 	return metrics
 }
 
 // RouterWithRolesSummary provides a lightweight representation with role information
 type RouterWithRolesSummary struct {
 	Router
-	RoleCodes        []string `json:"role_codes"`
-	RoleNames        []string `json:"role_names"`
-	PrimaryRoleCode  *string  `json:"primary_role_code,omitempty"`
-	HasCapabilities  bool     `json:"has_capabilities"`
-	CanPoll          bool     `json:"can_poll"`
-	PreferredMethod  *string  `json:"preferred_method,omitempty"`
+	RoleCodes       []string `json:"role_codes"`
+	RoleNames       []string `json:"role_names"`
+	PrimaryRoleCode *string  `json:"primary_role_code,omitempty"`
+	HasCapabilities bool     `json:"has_capabilities"`
+	CanPoll         bool     `json:"can_poll"`
+	PreferredMethod *string  `json:"preferred_method,omitempty"`
 }

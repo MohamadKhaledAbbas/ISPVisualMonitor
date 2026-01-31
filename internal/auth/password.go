@@ -10,10 +10,10 @@ import (
 var (
 	// ErrPasswordTooShort is returned when password is too short
 	ErrPasswordTooShort = errors.New("password must be at least 8 characters")
-	
+
 	// ErrPasswordHashFailed is returned when password hashing fails
 	ErrPasswordHashFailed = errors.New("failed to hash password")
-	
+
 	// ErrPasswordMismatch is returned when password doesn't match hash
 	ErrPasswordMismatch = errors.New("password does not match")
 )
@@ -21,7 +21,7 @@ var (
 const (
 	// MinPasswordLength defines minimum password length
 	MinPasswordLength = 8
-	
+
 	// DefaultBcryptCost is the default bcrypt cost factor
 	DefaultBcryptCost = 12
 )
@@ -33,16 +33,16 @@ func HashPassword(password string, cost int) (string, error) {
 	if len(password) < MinPasswordLength {
 		return "", ErrPasswordTooShort
 	}
-	
+
 	if cost < bcrypt.MinCost || cost > bcrypt.MaxCost {
 		cost = DefaultBcryptCost
 	}
-	
+
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), cost)
 	if err != nil {
 		return "", ErrPasswordHashFailed
 	}
-	
+
 	return string(hashedBytes), nil
 }
 
@@ -56,7 +56,7 @@ func VerifyPassword(password, hash string) error {
 		}
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -65,7 +65,7 @@ func VerifyPassword(password, hash string) error {
 // This prevents timing attacks that could determine if a user exists
 func VerifyPasswordSafe(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	
+
 	// Use constant-time comparison for the error result
 	// This ensures the function takes the same time regardless of whether
 	// the password is correct or incorrect
@@ -75,7 +75,7 @@ func VerifyPasswordSafe(password, hash string) bool {
 		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 		return false
 	}
-	
+
 	return true
 }
 

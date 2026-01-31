@@ -12,11 +12,11 @@ func NewAuthProvider(cfg *config.AuthConfig) (AuthProvider, error) {
 	switch cfg.Provider {
 	case "local":
 		return NewLocalProvider(cfg)
-		
+
 	case "oidc", "keycloak", "auth0":
 		// Stub for future OIDC implementation
 		return NewOIDCProvider(cfg)
-		
+
 	default:
 		return nil, fmt.Errorf("unknown auth provider: %s", cfg.Provider)
 	}

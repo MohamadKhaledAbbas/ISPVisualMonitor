@@ -7,21 +7,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/database"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/config"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/models"
+	"github.com/google/uuid"
 )
 
 // Service handles router polling operations
 type Service struct {
 	db     *database.DB
 	config config.PollerConfig
-	
+
 	// Channels for work distribution
 	jobs    chan *models.Router
 	results chan *PollResult
-	
+
 	// Worker management
 	wg sync.WaitGroup
 }
@@ -48,32 +48,32 @@ func NewService(db *database.DB, cfg config.PollerConfig) *Service {
 // Start begins the polling service
 func (s *Service) Start(ctx context.Context) error {
 	log.Printf("Starting poller service with %d workers", s.config.WorkerCount)
-	
+
 	// Start worker goroutines
 	for i := 0; i < s.config.WorkerCount; i++ {
 		s.wg.Add(1)
 		go s.worker(ctx, i)
 	}
-	
+
 	// Start result processor
 	s.wg.Add(1)
 	go s.resultProcessor(ctx)
-	
+
 	// Start job scheduler
 	s.wg.Add(1)
 	go s.scheduler(ctx)
-	
+
 	// Wait for context cancellation
 	<-ctx.Done()
 	log.Println("Poller service shutting down...")
-	
+
 	// Close channels
 	close(s.jobs)
-	
+
 	// Wait for workers to finish
 	s.wg.Wait()
 	close(s.results)
-	
+
 	log.Println("Poller service stopped")
 	return nil
 }
@@ -81,13 +81,13 @@ func (s *Service) Start(ctx context.Context) error {
 // scheduler periodically fetches routers that need polling
 func (s *Service) scheduler(ctx context.Context) {
 	defer s.wg.Done()
-	
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	// Run immediately on start
 	s.fetchAndScheduleRouters()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -112,19 +112,19 @@ func (s *Service) fetchAndScheduleRouters() {
 		ORDER BY last_polled_at NULLS FIRST
 		LIMIT $1
 	`
-	
+
 	rows, err := s.db.Query(query, s.config.ConcurrentPolls)
 	if err != nil {
 		log.Printf("Error querying routers: %v", err)
 		return
 	}
 	defer rows.Close()
-	
+
 	count := 0
 	for rows.Next() {
 		router := &models.Router{}
 		var lastPolled *time.Time
-		
+
 		err := rows.Scan(
 			&router.ID,
 			&router.TenantID,
@@ -136,14 +136,14 @@ func (s *Service) fetchAndScheduleRouters() {
 			&router.PollingIntervalSeconds,
 			&lastPolled,
 		)
-		
+
 		if err != nil {
 			log.Printf("Error scanning router: %v", err)
 			continue
 		}
-		
+
 		router.LastPolledAt = lastPolled
-		
+
 		// Send to job channel (non-blocking)
 		select {
 		case s.jobs <- router:
@@ -153,7 +153,7 @@ func (s *Service) fetchAndScheduleRouters() {
 			log.Printf("Job queue full, skipping router %s", router.Name)
 		}
 	}
-	
+
 	if count > 0 {
 		log.Printf("Scheduled %d routers for polling", count)
 	}
@@ -162,9 +162,9 @@ func (s *Service) fetchAndScheduleRouters() {
 // worker processes polling jobs
 func (s *Service) worker(ctx context.Context, id int) {
 	defer s.wg.Done()
-	
+
 	log.Printf("Poller worker %d started", id)
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -175,9 +175,9 @@ func (s *Service) worker(ctx context.Context, id int) {
 				log.Printf("Poller worker %d stopped (channel closed)", id)
 				return
 			}
-			
+
 			result := s.pollRouter(router)
-			
+
 			// Send result (non-blocking)
 			select {
 			case s.results <- result:
@@ -191,11 +191,11 @@ func (s *Service) worker(ctx context.Context, id int) {
 // pollRouter performs the actual SNMP polling of a router
 func (s *Service) pollRouter(router *models.Router) *PollResult {
 	log.Printf("Polling router: %s (%s)", router.Name, router.ManagementIP)
-	
+
 	// TODO: Implement actual SNMP polling
 	// For now, simulate a successful poll
 	time.Sleep(100 * time.Millisecond)
-	
+
 	return &PollResult{
 		RouterID:  router.ID,
 		Success:   true,
@@ -211,9 +211,9 @@ func (s *Service) pollRouter(router *models.Router) *PollResult {
 // resultProcessor handles polling results
 func (s *Service) resultProcessor(ctx context.Context) {
 	defer s.wg.Done()
-	
+
 	log.Println("Result processor started")
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -224,7 +224,7 @@ func (s *Service) resultProcessor(ctx context.Context) {
 				log.Println("Result processor stopped (channel closed)")
 				return
 			}
-			
+
 			if result.Success {
 				s.handleSuccessfulPoll(result)
 			} else {
@@ -242,21 +242,21 @@ func (s *Service) handleSuccessfulPoll(result *PollResult) {
 		result.Timestamp,
 		result.RouterID,
 	)
-	
+
 	if err != nil {
 		log.Printf("Error updating router poll timestamp: %v", err)
 	}
-	
+
 	// TODO: Store metrics in database
 	// INSERT INTO router_metrics (router_id, timestamp, cpu_percent, memory_percent, uptime_seconds)
-	
+
 	log.Printf("Successfully polled router %s", result.RouterID)
 }
 
 // handleFailedPoll processes a failed polling result
 func (s *Service) handleFailedPoll(result *PollResult) {
 	log.Printf("Failed to poll router %s: %v", result.RouterID, result.Error)
-	
+
 	// TODO: Create alert for failed polling
 	// TODO: Update router status if consecutive failures exceed threshold
 }
@@ -269,13 +269,13 @@ func (s *Service) PollNow(routerID uuid.UUID) error {
 		"SELECT id, tenant_id, name, management_ip FROM routers WHERE id = $1",
 		routerID,
 	).Scan(&router.ID, &router.TenantID, &router.Name, &router.ManagementIP)
-	
+
 	if err != nil {
 		return fmt.Errorf("router not found: %w", err)
 	}
-	
+
 	// Send to job channel
 	s.jobs <- router
-	
+
 	return nil
 }

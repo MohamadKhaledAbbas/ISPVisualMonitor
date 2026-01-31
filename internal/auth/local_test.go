@@ -192,7 +192,7 @@ func TestLocalProvider_ValidateToken(t *testing.T) {
 	expiredCfg.AccessTokenTTL = -1 * time.Hour // Already expired
 	expiredProvider, _ := NewLocalProvider(expiredCfg)
 	expiredTokenPair, _ := expiredProvider.IssueToken(ctx, user, tenant)
-	
+
 	_, err = expiredProvider.ValidateToken(ctx, expiredTokenPair.AccessToken)
 	if err != ErrExpiredToken {
 		t.Errorf("expected ErrExpiredToken, got %v", err)
@@ -408,7 +408,7 @@ func TestLocalProvider_ConcurrentAccess(t *testing.T) {
 	user.TenantID = tenant.ID
 
 	ctx := context.Background()
-	
+
 	// Issue token
 	tokenPair, err := provider.IssueToken(ctx, user, tenant)
 	if err != nil {
