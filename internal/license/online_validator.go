@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -192,7 +193,9 @@ func (v *OnlineValidator) StartBackgroundValidation(ctx context.Context, interva
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				_, _ = v.Validate(ctx, v.licenseKey)
+				if _, err := v.Validate(ctx, v.licenseKey); err != nil {
+					log.Printf("background license validation failed: %v", err)
+				}
 			}
 		}
 	}()

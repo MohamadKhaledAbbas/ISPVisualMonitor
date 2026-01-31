@@ -2,6 +2,8 @@ package license
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -136,17 +138,17 @@ func (c *OfflineCache) Clear() error {
 	return os.Remove(c.cachePath)
 }
 
-// computeChecksum computes a simple checksum for the license info
+// computeChecksum computes a SHA-256 checksum for the license info
 func (c *OfflineCache) computeChecksum(info *LicenseInfo) string {
 	if info == nil {
 		return ""
 	}
-	data, _ := json.Marshal(info)
-	sum := 0
-	for _, b := range data {
-		sum += int(b)
+	data, err := json.Marshal(info)
+	if err != nil {
+		return ""
 	}
-	return string(rune(sum % 0xFFFF))
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
 }
 
 // CachedValidator wraps an online validator with offline caching
