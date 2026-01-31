@@ -125,14 +125,17 @@ func (s *TopologyService) GetTopologyGeoJSON(ctx context.Context, tenantID uuid.
 		return nil, fmt.Errorf("failed to get topology")
 	}
 
-	// Create interface ID to router mapping
+	// Create router ID to router map for O(1) lookups
+	routerMap := make(map[uuid.UUID]*models.Router)
+	for _, router := range routers {
+		routerMap[router.ID] = router
+	}
+
+	// Create interface ID to router mapping with O(n) complexity
 	interfaceToRouter := make(map[uuid.UUID]*models.Router)
 	for _, iface := range interfaces {
-		for _, router := range routers {
-			if router.ID == iface.RouterID {
-				interfaceToRouter[iface.ID] = router
-				break
-			}
+		if router, ok := routerMap[iface.RouterID]; ok {
+			interfaceToRouter[iface.ID] = router
 		}
 	}
 
