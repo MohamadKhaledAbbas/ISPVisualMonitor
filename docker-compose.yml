@@ -63,7 +63,7 @@ services:
       POLLER_INTERVAL: 300
       POLLER_CONCURRENT: 50
     ports:
-      - "8080:8080"
+      - "18080:8080"
     depends_on:
       postgres:
         condition: service_healthy

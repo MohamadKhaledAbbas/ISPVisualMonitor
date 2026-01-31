@@ -1,0 +1,128 @@
+# chr-lab/docker-compose.chr.yml
+version: '3.8'
+
+services:
+  # Core Router
+  chr-core-01:
+    image: evilfreelancer/docker-routeros:latest
+    container_name: chr-core-01
+    hostname: chr-core-01
+    restart: unless-stopped
+    ports:
+      - "18081:80"    # WebFig
+      - "8292:8291"   # Winbox
+      - "8728:8728"   # API
+      - "8722:22"     # SSH
+      - "161:161/udp" # SNMP
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      isp_network:
+        ipv4_address: 172.25.0.10
+      monitoring_network:
+        ipv4_address: 172.26.0.10
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - chr-core-01-data:/opt/routeros
+
+  # Edge Router
+  chr-edge-01:
+    image: evilfreelancer/docker-routeros:latest
+    container_name: chr-edge-01
+    hostname: chr-edge-01
+    restart: unless-stopped
+    ports:
+      - "18082:80"    # WebFig
+      - "8293:8291"   # Winbox
+      - "8729:8728"   # API
+      - "8723:22"     # SSH
+      - "162:161/udp" # SNMP
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      isp_network:
+        ipv4_address: 172.25.0.11
+      monitoring_network:
+        ipv4_address: 172.26.0.11
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - chr-edge-01-data:/opt/routeros
+
+  # Access Router (NAT)
+  chr-access-01:
+    image: evilfreelancer/docker-routeros:latest
+    container_name: chr-access-01
+    hostname: chr-access-01
+    restart: unless-stopped
+    ports:
+      - "18083:80"    # WebFig
+      - "8294:8291"   # Winbox
+      - "8730:8728"   # API
+      - "8724:22"     # SSH
+      - "163:161/udp" # SNMP
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      isp_network:
+        ipv4_address: 172.25.0.12
+      monitoring_network:
+        ipv4_address: 172.26.0.12
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - chr-access-01-data:/opt/routeros
+
+  # PPPoE Server
+  chr-pppoe-01:
+    image: evilfreelancer/docker-routeros:latest
+    container_name: chr-pppoe-01
+    hostname: chr-pppoe-01
+    restart: unless-stopped
+    ports:
+      - "18084:80"    # WebFig
+      - "8295:8291"   # Winbox
+      - "8731:8728"   # API
+      - "8725:22"     # SSH
+      - "164:161/udp" # SNMP
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      customer_network:
+        ipv4_address: 172.27.0.13
+      monitoring_network:
+        ipv4_address: 172.26.0.13
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - chr-pppoe-01-data:/opt/routeros
+
+networks:
+  isp_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+
+  monitoring_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/24
+
+  customer_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.27.0.0/24
+
+volumes:
+  chr-core-01-data:
+  chr-edge-01-data:
+  chr-access-01-data:
+  chr-pppoe-01-data:

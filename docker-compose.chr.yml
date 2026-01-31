@@ -1,23 +1,20 @@
-# MikroTik CHR (Cloud Hosted Router) Lab Environment
-# This docker-compose file sets up a test environment with multiple MikroTik CHR instances
-# for testing and developing the ISP Visual Monitor's polling adapters
-
-version: '3.8'
+version: "3.8"
 
 services:
-  # Core Router - Backbone routing
   chr-core-01:
     image: evilfreelancer/docker-routeros:latest
     container_name: isp-chr-core-01
     hostname: chr-core-01
     ports:
-      - "8728:8728"  # API port
-      - "8729:8729"  # API-SSL port
-      - "2221:22"    # SSH
-      - "8080:80"    # WebFig
-      - "161:161/udp" # SNMP
+      - "8728:8728"        # API
+      - "8729:8729"        # API-SSL
+      - "2221:22"          # SSH
+      - "18081:80"         # WebFig
+      - "161:161/udp"      # SNMP (optional)
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
     networks:
       chr_network:
         ipv4_address: 172.25.0.10
@@ -25,20 +22,21 @@ services:
       - ROUTER_NAME=chr-core-01
       - ROUTER_ROLE=core_router
     restart: unless-stopped
-    
-  # Edge Router - External connectivity
+
   chr-edge-01:
     image: evilfreelancer/docker-routeros:latest
     container_name: isp-chr-edge-01
     hostname: chr-edge-01
     ports:
-      - "8738:8728"  # API port
-      - "8739:8729"  # API-SSL port
-      - "2222:22"    # SSH
-      - "8081:80"    # WebFig
-      - "162:161/udp" # SNMP
+      - "8738:8728"        # API (host) -> 8728 (router)
+      - "8739:8729"        # API-SSL
+      - "2222:22"          # SSH
+      - "18082:80"         # WebFig
+      - "162:161/udp"      # SNMP (optional)
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
     networks:
       chr_network:
         ipv4_address: 172.25.0.11
@@ -46,20 +44,21 @@ services:
       - ROUTER_NAME=chr-edge-01
       - ROUTER_ROLE=edge_router
     restart: unless-stopped
-    
-  # Access Router - Customer access with NAT
+
   chr-access-01:
     image: evilfreelancer/docker-routeros:latest
     container_name: isp-chr-access-01
     hostname: chr-access-01
     ports:
-      - "8748:8728"  # API port
-      - "8749:8729"  # API-SSL port
-      - "2223:22"    # SSH
-      - "8082:80"    # WebFig
-      - "163:161/udp" # SNMP
+      - "8748:8728"        # API (host) -> 8728 (router)
+      - "8749:8729"        # API-SSL
+      - "2223:22"          # SSH
+      - "18083:80"         # WebFig
+      - "163:161/udp"      # SNMP (optional)
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
     networks:
       chr_network:
         ipv4_address: 172.25.0.12
@@ -67,20 +66,21 @@ services:
       - ROUTER_NAME=chr-access-01
       - ROUTER_ROLE=access_router,nat_gateway
     restart: unless-stopped
-    
-  # PPPoE Server - PPPoE authentication and sessions
+
   chr-pppoe-01:
     image: evilfreelancer/docker-routeros:latest
     container_name: isp-chr-pppoe-01
     hostname: chr-pppoe-01
     ports:
-      - "8758:8728"  # API port
-      - "8759:8729"  # API-SSL port
-      - "2224:22"    # SSH
-      - "8083:80"    # WebFig
-      - "164:161/udp" # SNMP
+      - "8758:8728"        # API (host) -> 8728 (router)
+      - "8759:8729"        # API-SSL
+      - "2224:22"          # SSH
+      - "18084:80"         # WebFig
+      - "164:161/udp"      # SNMP (optional)
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
     networks:
       chr_network:
         ipv4_address: 172.25.0.13
@@ -89,57 +89,9 @@ services:
       - ROUTER_ROLE=pppoe_server,dhcp_server
     restart: unless-stopped
 
-  # ISP Monitor Application (connect to CHR lab)
-  isp-monitor-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: isp-monitor-dev
-    ports:
-      - "8080:8080"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=ispmonitor
-      - DB_PASSWORD=ispmonitor
-      - DB_NAME=ispmonitor
-      - JWT_SECRET=dev-secret-change-in-production
-      - POLLER_WORKERS=4
-      - POLLER_INTERVAL=60
-    depends_on:
-      - postgres
-      - chr-core-01
-      - chr-edge-01
-      - chr-access-01
-      - chr-pppoe-01
-    networks:
-      - chr_network
-    restart: unless-stopped
-
-  # PostgreSQL Database
-  postgres:
-    image: postgis/postgis:15-3.3
-    container_name: isp-postgres-chr
-    environment:
-      - POSTGRES_USER=ispmonitor
-      - POSTGRES_PASSWORD=ispmonitor
-      - POSTGRES_DB=ispmonitor
-    volumes:
-      - postgres_chr_data:/var/lib/postgresql/data
-      - ./db/migrations:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
-    networks:
-      - chr_network
-    restart: unless-stopped
-
 networks:
   chr_network:
     driver: bridge
     ipam:
       config:
         - subnet: 172.25.0.0/16
-
-volumes:
-  postgres_chr_data:
-    driver: local

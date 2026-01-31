@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  chr-01:
+    image: evilfreelancer/docker-routeros:latest
+    container_name: chr-01
+    hostname: chr-01
+    ports:
+      - "8728:8728"       # API
+      - "8729:8729"       # API-SSL
+      - "2221:22"         # SSH
+      - "18081:80"        # WebFig
+      - "8291:8291"       # Winbox
+      - "161:161/udp"     # SNMP (optional)
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      chr_network:
+        ipv4_address: 172.25.0.10
+    environment:
+      - ROUTER_NAME=chr-01
+      - ROUTER_ROLE=core_router,edge_router,access_router,nat_gateway,pppoe_server,dhcp_server
+    volumes:
+      - chr-01-data:/opt/routeros
+    restart: unless-stopped
+
+networks:
+  chr_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+volumes:
+  chr-01-data:
