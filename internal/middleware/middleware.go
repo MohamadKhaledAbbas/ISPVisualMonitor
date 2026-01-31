@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/auth"
 	"github.com/google/uuid"
 )
 
@@ -20,6 +21,8 @@ const (
 	UserIDKey ContextKey = "user_id"
 	// RequestIDKey is the context key for request ID
 	RequestIDKey ContextKey = "request_id"
+	// ClaimsKey is the context key for JWT claims
+	ClaimsKey ContextKey = "claims"
 )
 
 // Logger middleware logs HTTP requests
@@ -86,42 +89,55 @@ func RateLimiter(requestsPerMin int) func(http.Handler) http.Handler {
 	}
 }
 
-// Auth middleware validates JWT tokens
-func Auth(jwtSecret string) func(http.Handler) http.Handler {
+// Auth middleware validates JWT tokens using the configured auth provider
+func Auth(provider auth.AuthProvider) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract token from Authorization header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				respondWithError(w, http.StatusUnauthorized, "Authorization header required")
 				return
 			}
 			
 			// Check if it's a Bearer token
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
-				http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
+				respondWithError(w, http.StatusUnauthorized, "Invalid authorization header format")
 				return
 			}
 			
-			token := parts[1]
+			tokenString := parts[1]
 			
-			// TODO: Implement JWT validation
-			// For now, just pass through
-			_ = token
-			_ = jwtSecret
+			// Validate token using provider
+			claims, err := provider.ValidateToken(r.Context(), tokenString)
+			if err != nil {
+				switch err {
+				case auth.ErrExpiredToken:
+					respondWithError(w, http.StatusUnauthorized, "Token has expired")
+				case auth.ErrRevokedToken:
+					respondWithError(w, http.StatusUnauthorized, "Token has been revoked")
+				default:
+					respondWithError(w, http.StatusUnauthorized, "Invalid token")
+				}
+				return
+			}
 			
-			// Mock: Extract tenant_id and user_id from token claims
-			// In production, parse JWT and extract claims
-			mockTenantID := uuid.New()
-			mockUserID := uuid.New()
-			
-			ctx := context.WithValue(r.Context(), TenantIDKey, mockTenantID)
-			ctx = context.WithValue(ctx, UserIDKey, mockUserID)
+			// Inject claims into context
+			ctx := context.WithValue(r.Context(), ClaimsKey, claims)
+			ctx = context.WithValue(ctx, TenantIDKey, claims.TenantID)
+			ctx = context.WithValue(ctx, UserIDKey, claims.UserID)
 			
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// respondWithError sends a JSON error response
+func respondWithError(w http.ResponseWriter, code int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write([]byte(`{"error":"` + message + `"}`))
 }
 
 // TenantContext middleware sets the database tenant context
