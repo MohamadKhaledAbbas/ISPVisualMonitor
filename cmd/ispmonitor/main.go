@@ -47,7 +47,7 @@ func main() {
 	}()
 
 	// Initialize API server
-	apiServer := api.NewServer(db, cfg.API)
+	apiServer := api.NewServer(db, cfg.API, cfg.Auth)
 	
 	// Start HTTP server
 	srv := &http.Server{

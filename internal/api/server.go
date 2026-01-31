@@ -2,9 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/auth"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/database"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/middleware"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/config"
@@ -12,17 +14,27 @@ import (
 
 // Server represents the API server
 type Server struct {
-	db     *database.DB
-	config config.APIConfig
-	router *mux.Router
+	db           *database.DB
+	config       config.APIConfig
+	authConfig   config.AuthConfig
+	router       *mux.Router
+	authProvider auth.AuthProvider
 }
 
 // NewServer creates a new API server instance
-func NewServer(db *database.DB, cfg config.APIConfig) *Server {
+func NewServer(db *database.DB, apiCfg config.APIConfig, authCfg config.AuthConfig) *Server {
+	// Create auth provider
+	authProvider, err := auth.NewAuthProvider(&authCfg)
+	if err != nil {
+		log.Fatalf("Failed to create auth provider: %v", err)
+	}
+
 	s := &Server{
-		db:     db,
-		config: cfg,
-		router: mux.NewRouter(),
+		db:           db,
+		config:       apiCfg,
+		authConfig:   authCfg,
+		router:       mux.NewRouter(),
+		authProvider: authProvider,
 	}
 
 	s.setupRoutes()
@@ -50,7 +62,7 @@ func (s *Server) setupRoutes() {
 
 	// Protected routes (require authentication)
 	protected := api.PathPrefix("").Subrouter()
-	protected.Use(middleware.Auth(s.config.JWTSecret))
+	protected.Use(middleware.Auth(s.authProvider))
 	protected.Use(middleware.TenantContext)
 
 	// Router endpoints

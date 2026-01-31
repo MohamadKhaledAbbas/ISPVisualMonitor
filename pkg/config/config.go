@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 // Config holds all application configuration
@@ -45,9 +46,24 @@ type PollerConfig struct {
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
-	TokenExpiry        int // minutes
-	RefreshTokenExpiry int // days
-	BcryptCost         int
+	Provider         string        // local, keycloak, auth0, oidc
+	JWTSecret        string        // Secret for HS256 signing
+	JWTSigningMethod string        // HS256 or RS256
+	JWTPrivateKey    string        // For RS256 (PEM format)
+	JWTPublicKey     string        // For RS256 (PEM format)
+	AccessTokenTTL   time.Duration // Access token expiration time
+	RefreshTokenTTL  time.Duration // Refresh token expiration time
+	Issuer           string        // JWT issuer identifier
+	BcryptCost       int           // Bcrypt cost for password hashing
+	
+	// For external OIDC providers (Keycloak, Auth0, etc.)
+	OIDCIssuerURL    string
+	OIDCClientID     string
+	OIDCClientSecret string
+	
+	// Legacy fields (deprecated, but kept for backward compatibility)
+	TokenExpiry        int // minutes (deprecated - use AccessTokenTTL)
+	RefreshTokenExpiry int // days (deprecated - use RefreshTokenTTL)
 }
 
 // Load reads configuration from environment variables
@@ -77,9 +93,24 @@ func Load() (*Config, error) {
 			ConcurrentPolls:  getEnvInt("POLLER_CONCURRENT", 50),
 		},
 		Auth: AuthConfig{
+			Provider:         getEnv("AUTH_PROVIDER", "local"),
+			JWTSecret:        getEnv("JWT_SECRET", "change-me-in-production"),
+			JWTSigningMethod: getEnv("JWT_SIGNING_METHOD", "HS256"),
+			JWTPrivateKey:    getEnv("JWT_PRIVATE_KEY", ""),
+			JWTPublicKey:     getEnv("JWT_PUBLIC_KEY", ""),
+			AccessTokenTTL:   getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute),
+			RefreshTokenTTL:  getEnvDuration("REFRESH_TOKEN_TTL", 168*time.Hour), // 7 days
+			Issuer:           getEnv("JWT_ISSUER", "ispvisualmonitor"),
+			BcryptCost:       getEnvInt("BCRYPT_COST", 12),
+			
+			// OIDC configuration
+			OIDCIssuerURL:    getEnv("OIDC_ISSUER_URL", ""),
+			OIDCClientID:     getEnv("OIDC_CLIENT_ID", ""),
+			OIDCClientSecret: getEnv("OIDC_CLIENT_SECRET", ""),
+			
+			// Legacy fields for backward compatibility
 			TokenExpiry:        getEnvInt("TOKEN_EXPIRY_MIN", 60),
 			RefreshTokenExpiry: getEnvInt("REFRESH_TOKEN_EXPIRY_DAYS", 7),
-			BcryptCost:         getEnvInt("BCRYPT_COST", 12),
 		},
 	}
 
@@ -112,6 +143,15 @@ func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intValue, err := strconv.Atoi(value); err == nil {
 			return intValue
+		}
+	}
+	return defaultValue
+}
+
+func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
+	if value := os.Getenv(key); value != "" {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
 		}
 	}
 	return defaultValue
