@@ -25,13 +25,13 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Create a non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001 && \
-    chown -R nextjs:nodejs /usr/share/nginx/html && \
-    chown -R nextjs:nodejs /var/cache/nginx && \
-    chown -R nextjs:nodejs /var/log/nginx && \
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 && \
+    chown -R appuser:appgroup /usr/share/nginx/html && \
+    chown -R appuser:appgroup /var/cache/nginx && \
+    chown -R appuser:appgroup /var/log/nginx && \
     touch /var/run/nginx.pid && \
-    chown -R nextjs:nodejs /var/run/nginx.pid
+    chown -R appuser:appgroup /var/run/nginx.pid
 
 # Expose port
 EXPOSE 80
