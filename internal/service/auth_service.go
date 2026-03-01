@@ -46,7 +46,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 	}
 
 	// Verify password
-	if err := auth.VerifyPassword(user.PasswordHash, req.Password); err != nil {
+	if err := auth.VerifyPassword(req.Password, user.PasswordHash); err != nil {
 		s.logger.Warn("Login failed: invalid password", zap.String("email", req.Email))
 		return nil, fmt.Errorf("invalid credentials")
 	}

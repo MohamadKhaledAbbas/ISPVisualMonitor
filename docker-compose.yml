@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Development Docker Compose configuration
 # Use with: docker-compose up -d
 
@@ -30,11 +28,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - ispmonitor
 
@@ -57,9 +57,12 @@ services:
       - POLLER_WORKERS=10
       - POLLER_INTERVAL=300
       - POLLER_CONCURRENT=50
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - ispmonitor
 
@@ -75,11 +78,13 @@ services:
       POSTGRES_DB: ispmonitor
     ports:
       - "5432:5432"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ispmonitor"]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - ispmonitor
 
@@ -90,6 +95,7 @@ services:
       - redis_data:/data
     ports:
       - "6379:6379"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -106,6 +112,7 @@ services:
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
+    restart: unless-stopped
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -123,6 +130,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
     depends_on:
       - prometheus
     networks:
