@@ -110,6 +110,9 @@ func (s *Server) setupRoutes() {
 	s.router.Use(middleware.CORS(s.config.AllowedOrigins))
 	s.router.Use(middleware.RateLimiter(s.config.RateLimitPerMin))
 
+	// Root endpoint (no auth required)
+	s.router.HandleFunc("/", s.handleRoot).Methods("GET")
+
 	// Health check endpoint (no auth required)
 	s.router.HandleFunc("/health", s.handleHealthCheck).Methods("GET")
 	s.router.HandleFunc("/api/v1/health", s.handleHealthCheck).Methods("GET")
@@ -170,6 +173,44 @@ func (s *Server) setupRoutes() {
 // Handler returns the HTTP handler
 func (s *Server) Handler() http.Handler {
 	return s.router
+}
+
+// handleRoot handles requests to the root path
+func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
+	utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"service": "ISP Visual Monitor API",
+		"version": "v1",
+		"status":  "running",
+		"docs":    "https://github.com/MohamadKhaledAbbas/ISPVisualMonitor",
+		"endpoints": map[string]interface{}{
+			"health": map[string]string{
+				"GET /health":        "Health check (no auth required)",
+				"GET /api/v1/health": "Health check v1 (no auth required)",
+			},
+			"auth": map[string]string{
+				"POST /api/v1/auth/login":    "User login (no auth required)",
+				"POST /api/v1/auth/register": "User registration (no auth required)",
+				"POST /api/v1/auth/refresh":  "Token refresh (no auth required)",
+				"POST /api/v1/auth/logout":   "User logout (auth required)",
+			},
+			"routers": map[string]string{
+				"GET /api/v1/routers":         "List all routers (auth required)",
+				"POST /api/v1/routers":        "Create new router (auth required)",
+				"GET /api/v1/routers/{id}":    "Get router details (auth required)",
+				"PUT /api/v1/routers/{id}":    "Update router (auth required)",
+				"DELETE /api/v1/routers/{id}": "Delete router (auth required)",
+			},
+			"topology": map[string]string{
+				"GET /api/v1/topology":         "Get network topology (auth required)",
+				"GET /api/v1/topology/geojson": "Get topology as GeoJSON (auth required)",
+			},
+			"metrics": map[string]string{
+				"GET /api/v1/metrics/interfaces/{id}": "Get interface metrics (auth required)",
+				"GET /api/v1/metrics/routers/{id}":    "Get router metrics (auth required)",
+			},
+		},
+		"note": "Most endpoints require JWT authentication. Use /api/v1/auth/login to get a token.",
+	})
 }
 
 // handleHealthCheck handles health check requests

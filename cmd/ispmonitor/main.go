@@ -66,6 +66,10 @@ func main() {
 		}
 	}()
 
+	// Give the server a moment to start listening
+	time.Sleep(100 * time.Millisecond)
+	log.Printf("API server is ready to accept requests on http://localhost:%d", cfg.API.Port)
+
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

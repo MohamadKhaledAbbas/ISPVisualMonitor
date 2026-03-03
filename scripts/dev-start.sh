@@ -61,6 +61,20 @@ nohup go run ./cmd/ispmonitor > /tmp/ispmonitor-api.log 2>&1 &
 API_PID=$!
 echo "  API PID: $API_PID (logs: /tmp/ispmonitor-api.log)"
 
+# Wait for port 8080 to be listening (initial startup)
+echo "  Waiting for API server to start listening..."
+for i in $(seq 1 10); do
+  if lsof -i :8080 > /dev/null 2>&1; then
+    echo "  API server is listening on port 8080"
+    break
+  fi
+  sleep 1
+  if [ $i -eq 10 ]; then
+    echo -e "${RED}  API server failed to start listening! Check /tmp/ispmonitor-api.log${NC}"
+    exit 1
+  fi
+done
+
 # Wait for API to be ready
 for i in $(seq 1 30); do
   if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
@@ -70,6 +84,7 @@ for i in $(seq 1 30); do
   sleep 1
   if [ $i -eq 30 ]; then
     echo -e "${RED}  API server failed to start! Check /tmp/ispmonitor-api.log${NC}"
+    tail -20 /tmp/ispmonitor-api.log
     exit 1
   fi
 done
@@ -109,8 +124,8 @@ echo -e "  ${GREEN}Redis:${NC}              localhost:6379"
 echo ""
 echo "  Login Credentials:"
 echo "  ─────────────────────────────────────"
-echo "  Email:     admin@demo.isp"
-echo "  Password:  Admin123!"
+echo "  Email:     admin@example.com"
+echo "  Password:  Admin@12345"
 echo ""
 echo "  Useful commands:"
 echo "  ─────────────────────────────────────"
