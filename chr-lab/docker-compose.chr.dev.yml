@@ -14,11 +14,14 @@ services:
       - "161:161/udp"     # SNMP (optional)
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     devices:
       - /dev/net/tun:/dev/net/tun
     networks:
       chr_network:
         ipv4_address: 172.25.0.10
+      chr_mgmt_network:
+        ipv4_address: 172.26.0.10
     environment:
       - ROUTER_NAME=chr-01
       - ROUTER_ROLE=core_router,edge_router,access_router,nat_gateway,pppoe_server,dhcp_server
@@ -32,6 +35,12 @@ networks:
     ipam:
       config:
         - subnet: 172.25.0.0/16
+
+  chr_mgmt_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/24
 
 volumes:
   chr-01-data:
