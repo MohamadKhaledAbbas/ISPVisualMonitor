@@ -214,3 +214,23 @@ demo-start:
 	@bash scripts/demo-seed.sh || echo "  Note: seed data may already be loaded or DB is still starting."
 	@echo ""
 	@echo "Demo mode is running. See docs/DEMO.md for details."
+
+# ============================================================================
+# Simulator
+# ============================================================================
+
+# Run the standalone simulator (requires DB running)
+sim:
+	@echo "Starting ISP telemetry simulator..."
+	go run ./cmd/simulator
+
+# Run simulator with a specific scenario
+sim-scenario:
+	@echo "Usage: make sim-scenario SCENARIO=router-down"
+	@echo "Available: healthy, router-down, link-saturation, upstream-outage, packet-loss, session-spike, flapping-interface"
+	@test -n "$(SCENARIO)" || (echo "Error: set SCENARIO=<name>"; exit 1)
+	SIM_SCENARIO=$(SCENARIO) go run ./cmd/simulator
+
+# Run simulator in deterministic mode
+sim-deterministic:
+	SIM_MODE=deterministic go run ./cmd/simulator
