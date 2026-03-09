@@ -35,6 +35,13 @@ type DeploymentConfig struct {
 	// Logging
 	LogLevel  string `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string `env:"LOG_FORMAT" envDefault:"json"`
+
+	// Demo / development mode
+	AppMode         string `env:"APP_MODE" envDefault:"normal"`
+	EnableSimulator bool   `env:"ENABLE_SIMULATOR" envDefault:"false"`
+	EnableRealAgent bool   `env:"ENABLE_REAL_AGENT" envDefault:"true"`
+	UseSeedData     bool   `env:"USE_SEED_DATA" envDefault:"false"`
+	BypassLicense   bool   `env:"BYPASS_LICENSE" envDefault:"false"`
 }
 
 // LoadDeployment loads deployment configuration from environment variables
@@ -49,6 +56,11 @@ func LoadDeployment() *DeploymentConfig {
 		EnableProfiling:  getEnvBool("ENABLE_PROFILING", false),
 		LogLevel:         getEnvWithDefault("LOG_LEVEL", "info"),
 		LogFormat:        getEnvWithDefault("LOG_FORMAT", "json"),
+		AppMode:          getEnvWithDefault("APP_MODE", "normal"),
+		EnableSimulator:  getEnvBool("ENABLE_SIMULATOR", false),
+		EnableRealAgent:  getEnvBool("ENABLE_REAL_AGENT", true),
+		UseSeedData:      getEnvBool("USE_SEED_DATA", false),
+		BypassLicense:    getEnvBool("BYPASS_LICENSE", false),
 	}
 }
 
@@ -67,8 +79,16 @@ func (c *DeploymentConfig) IsDevelopment() bool {
 	return c.Mode == DeploymentModeDevelopment
 }
 
+// IsDemo returns true if running in demo mode
+func (c *DeploymentConfig) IsDemo() bool {
+	return c.AppMode == "demo"
+}
+
 // RequiresLicense returns true if license validation is required
 func (c *DeploymentConfig) RequiresLicense() bool {
+	if c.BypassLicense {
+		return false
+	}
 	return c.IsProduction() || c.IsOnPremise()
 }
 

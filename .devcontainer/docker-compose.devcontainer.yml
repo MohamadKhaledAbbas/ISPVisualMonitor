@@ -1,0 +1,29 @@
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/go:1-1.22-bookworm
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ispmonitor
+      - DB_PASSWORD=ispmonitor
+      - DB_NAME=ispmonitor
+      - DB_SSLMODE=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=codespaces-dev-secret-not-for-production
+      - ALLOWED_ORIGINS=*
+      - LOG_LEVEL=debug
+      - APP_MODE=demo
+      - ENABLE_SIMULATOR=true
+      - ENABLE_REAL_AGENT=false
+      - USE_SEED_DATA=true
+      - BYPASS_LICENSE=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ispmonitor

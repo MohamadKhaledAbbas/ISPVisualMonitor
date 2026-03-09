@@ -1,4 +1,4 @@
-.PHONY: help build build-all run test clean docker-build docker-up docker-down migrate lint
+.PHONY: help build build-all run test clean docker-build docker-up docker-down migrate lint demo-seed demo-reset demo-scenarios demo-start
 
 # Version info
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -24,6 +24,12 @@ help:
 	@echo "  make lint           - Run linters (requires golangci-lint)"
 	@echo "  make setup-dev      - Setup development environment"
 	@echo "  make backup         - Create database backup"
+	@echo ""
+	@echo "  Demo mode:"
+	@echo "  make demo-start     - Start app in demo mode (infra + seed + API + frontend)"
+	@echo "  make demo-seed      - Load demo seed data into database"
+	@echo "  make demo-reset     - Reset demo data to clean baseline"
+	@echo "  make demo-scenarios - List available demo scenarios"
 	@echo ""
 
 # Build the application
@@ -178,3 +184,33 @@ release:
 release-dry:
 	@echo "Dry run release..."
 	goreleaser release --snapshot --clean
+
+# ============================================================================
+# Demo Mode
+# ============================================================================
+
+# Load demo seed data
+demo-seed:
+	@echo "Loading demo seed data..."
+	bash scripts/demo-seed.sh
+
+# Reset demo environment to clean baseline
+demo-reset:
+	@echo "Resetting demo environment..."
+	bash scripts/demo-reset.sh
+
+# List and run demo scenarios
+demo-scenarios:
+	@bash scripts/demo-scenarios.sh
+
+# Start full demo environment (infrastructure + seed + servers)
+demo-start:
+	@echo "Starting ISP Visual Monitor in demo mode..."
+	@echo ""
+	APP_MODE=demo ENABLE_SIMULATOR=true ENABLE_REAL_AGENT=false USE_SEED_DATA=true BYPASS_LICENSE=true \
+		bash scripts/dev-start.sh
+	@echo ""
+	@echo "Loading demo seed data..."
+	@bash scripts/demo-seed.sh 2>/dev/null || echo "  Seed data may already be loaded."
+	@echo ""
+	@echo "Demo mode is running. See docs/DEMO.md for details."
