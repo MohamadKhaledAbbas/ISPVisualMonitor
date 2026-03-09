@@ -42,7 +42,7 @@ fi
 export PGPASSWORD="$DB_PASSWORD"
 
 echo "Loading seed data..."
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$SEED_FILE" 2>&1 | tail -20
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$SEED_FILE"
 
 echo ""
 echo "Done. Demo data loaded."

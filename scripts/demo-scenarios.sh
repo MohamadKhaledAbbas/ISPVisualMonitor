@@ -36,7 +36,7 @@ done
 export PGPASSWORD="$DB_PASSWORD"
 
 run_sql() {
-  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -q <<< "$1"
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<< "$1"
 }
 
 case "$SCENARIO" in

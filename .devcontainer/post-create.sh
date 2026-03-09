@@ -33,7 +33,7 @@ done
 
 # 4. Load demo seed data
 echo "[4/5] Loading demo seed data..."
-if PGPASSWORD=ispmonitor psql -h postgres -U ispmonitor -d ispmonitor -f db/seed/demo_seed.sql 2>/dev/null; then
+if PGPASSWORD=ispmonitor psql -h postgres -U ispmonitor -d ispmonitor -f db/seed/demo_seed.sql; then
   echo "  Demo seed data loaded."
 else
   echo "  Warning: Could not load seed data. Run 'make demo-seed' after services are up."

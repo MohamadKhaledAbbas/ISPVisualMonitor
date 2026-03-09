@@ -211,6 +211,6 @@ demo-start:
 		bash scripts/dev-start.sh
 	@echo ""
 	@echo "Loading demo seed data..."
-	@bash scripts/demo-seed.sh 2>/dev/null || echo "  Seed data may already be loaded."
+	@bash scripts/demo-seed.sh || echo "  Note: seed data may already be loaded or DB is still starting."
 	@echo ""
 	@echo "Demo mode is running. See docs/DEMO.md for details."

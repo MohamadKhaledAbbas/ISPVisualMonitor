@@ -12,6 +12,7 @@ services:
       - DB_NAME=ispmonitor
       - DB_SSLMODE=disable
       - REDIS_URL=redis://redis:6379
+      # DEV ONLY — override with a real secret before any production use
       - JWT_SECRET=codespaces-dev-secret-not-for-production
       - ALLOWED_ORIGINS=*
       - LOG_LEVEL=debug
