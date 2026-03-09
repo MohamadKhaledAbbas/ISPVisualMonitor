@@ -2,7 +2,7 @@
 # ISP Visual Monitor — Trigger demo scenarios by updating database state.
 # These simulate real-world ISP events for demo / development.
 #
-# Usage:  bash scripts/demo-scenarios.sh <scenario> [--host HOST]
+# Usage:  bash scripts/demo-scenarios.sh [scenario] [--host HOST]
 #
 # Scenarios:
 #   healthy          Reset all routers to active, clear active alerts
@@ -35,9 +35,54 @@ done
 
 export PGPASSWORD="$DB_PASSWORD"
 
-run_sql() {
-  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<< "$1"
+print_usage() {
+  echo "ISP Visual Monitor — Demo Scenarios"
+  echo ""
+  echo "Usage: bash scripts/demo-scenarios.sh <scenario>"
+  echo ""
+  echo "Available scenarios:"
+  echo "  healthy          Reset to healthy baseline"
+  echo "  router-offline   Simulate router going offline"
+  echo "  core-congestion  Simulate core link congestion"
+  echo "  upstream-failure Simulate upstream provider failure"
+  echo "  packet-loss      Simulate packet loss spike"
+  echo "  high-sessions    Simulate high PPPoE session count"
+  echo ""
+  echo "Options:"
+  echo "  --host HOST      Database host (default: localhost)"
+  echo "  --port PORT      Database port (default: 5432)"
 }
+
+run_psql_stdin() {
+  if command -v psql >/dev/null 2>&1; then
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+  elif command -v docker-compose >/dev/null 2>&1; then
+    echo "Local psql not found; using docker-compose exec postgres psql..."
+    docker-compose up -d postgres >/dev/null
+    docker-compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
+    docker-compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+      psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+  elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    echo "Local psql not found; using docker compose exec postgres psql..."
+    docker compose up -d postgres >/dev/null
+    docker compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
+    docker compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+      psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+  else
+    echo "ERROR: Neither local 'psql' nor Docker Compose is available."
+    echo "Install postgresql-client, or run with Docker Compose available."
+    exit 127
+  fi
+}
+
+run_sql() {
+  printf "%s\n" "$1" | run_psql_stdin
+}
+
+if [[ -z "$SCENARIO" ]]; then
+  print_usage
+  exit 0
+fi
 
 case "$SCENARIO" in
 
@@ -174,21 +219,9 @@ case "$SCENARIO" in
     ;;
 
   *)
-    echo "ISP Visual Monitor — Demo Scenarios"
+    echo "Unknown scenario: $SCENARIO"
     echo ""
-    echo "Usage: bash scripts/demo-scenarios.sh <scenario>"
-    echo ""
-    echo "Available scenarios:"
-    echo "  healthy          Reset to healthy baseline"
-    echo "  router-offline   Simulate router going offline"
-    echo "  core-congestion  Simulate core link congestion"
-    echo "  upstream-failure Simulate upstream provider failure"
-    echo "  packet-loss      Simulate packet loss spike"
-    echo "  high-sessions    Simulate high PPPoE session count"
-    echo ""
-    echo "Options:"
-    echo "  --host HOST      Database host (default: localhost)"
-    echo "  --port PORT      Database port (default: 5432)"
+    print_usage
     exit 1
     ;;
 esac

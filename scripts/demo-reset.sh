@@ -28,6 +28,28 @@ export PGPASSWORD="$DB_PASSWORD"
 
 DEMO_TENANT="a0000000-0000-0000-0000-000000000001"
 
+run_psql_stdin() {
+  if command -v psql >/dev/null 2>&1; then
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+  elif command -v docker-compose >/dev/null 2>&1; then
+    echo "Local psql not found; using docker-compose exec postgres psql..."
+    docker-compose up -d postgres >/dev/null
+    docker-compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
+    docker-compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+      psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+  elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    echo "Local psql not found; using docker compose exec postgres psql..."
+    docker compose up -d postgres >/dev/null
+    docker compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
+    docker compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+      psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+  else
+    echo "ERROR: Neither local 'psql' nor Docker Compose is available."
+    echo "Install postgresql-client, or run with Docker Compose available."
+    exit 127
+  fi
+}
+
 echo "========================================"
 echo "  ISPVisualMonitor — Demo Reset"
 echo "========================================"
@@ -45,7 +67,7 @@ fi
 echo ""
 echo "Removing demo data..."
 
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<SQL
+run_psql_stdin <<SQL
 -- Remove demo data in dependency order
 DELETE FROM interface_metrics WHERE tenant_id = '$DEMO_TENANT';
 DELETE FROM router_metrics WHERE tenant_id = '$DEMO_TENANT';

@@ -42,7 +42,25 @@ fi
 export PGPASSWORD="$DB_PASSWORD"
 
 echo "Loading seed data..."
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$SEED_FILE"
+if command -v psql >/dev/null 2>&1; then
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$SEED_FILE"
+elif command -v docker-compose >/dev/null 2>&1; then
+  echo "Local psql not found; using docker-compose exec postgres psql..."
+  docker-compose up -d postgres >/dev/null
+  docker-compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
+  docker-compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f - < "$SEED_FILE"
+elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  echo "Local psql not found; using docker compose exec postgres psql..."
+  docker compose up -d postgres >/dev/null
+  docker compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
+  docker compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f - < "$SEED_FILE"
+else
+  echo "ERROR: Neither local 'psql' nor Docker Compose is available."
+  echo "Install postgresql-client, or run with Docker Compose available."
+  exit 127
+fi
 
 echo ""
 echo "Done. Demo data loaded."

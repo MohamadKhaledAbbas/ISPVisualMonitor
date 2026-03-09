@@ -214,3 +214,8 @@ demo-start:
 	@bash scripts/demo-seed.sh || echo "  Note: seed data may already be loaded or DB is still starting."
 	@echo ""
 	@echo "Demo mode is running. See docs/DEMO.md for details."
+
+demo-stop:
+	@echo "Stopping demo environment..."
+	bash scripts/dev-stop.sh
+	@echo "Demo environment stopped."
