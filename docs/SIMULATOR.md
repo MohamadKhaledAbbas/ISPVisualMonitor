@@ -152,8 +152,8 @@ configs/simulator.yaml          Configuration template
 
 - [ ] `make demo-start` — simulator auto-starts, logs show cycle output
 - [ ] `go run ./cmd/simulator` — standalone binary runs and writes metrics
-- [ ] Query `router_metrics` table — new rows appear every 30 s
-- [ ] Query `interface_metrics` table — new rows appear every 30 s
+- [ ] Query `router_metrics` table — new rows appear every 30s
+- [ ] Query `interface_metrics` table — new rows appear every 30s
 - [ ] Trigger `router-down` — TRI-ACCESS-01 shows offline, alert created
 - [ ] Trigger `healthy` — all routers return to active, alerts resolved
 - [ ] Run with `SIM_MODE=deterministic SIM_SEED=42` twice — same metrics

@@ -58,7 +58,7 @@ func (g *TelemetryGenerator) GenerateRouterMetrics(dev *SimDevice, tenantID uuid
 		Timestamp:          ts,
 		CPUPercent:         g.jitter(dev.BaselineCPU, 8),
 		MemoryPercent:      g.jitter(dev.BaselineMemory, 5),
-		UptimeSeconds:      dev.UptimeSeconds + int64(time.Since(ts).Seconds()),
+		UptimeSeconds:      dev.UptimeSeconds,
 		TemperatureCelsius: g.jitter(dev.BaselineTemp, 3),
 	}
 }

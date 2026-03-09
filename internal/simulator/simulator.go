@@ -191,16 +191,11 @@ func (s *Service) runCycle(ctx context.Context) {
 			}
 		}
 
-		// --- PPPoE snapshots ---
+		// --- PPPoE snapshots (informational; reflected via scenario alerts) ---
 		if dev.Role == RolePPPoE && dev.MaxPPPoESessions > 0 {
 			snap := s.gen.GeneratePPPoESnapshot(dev, s.topology.TenantID, now)
 			override.ApplyPPPoESnapshot(&snap)
-			// Store as a role-specific metric via router_metrics overload
-			// (session count goes into the cpu_percent column description won't apply—
-			//  but we track it for dashboard use).
-			// A cleaner approach would insert into role_specific_metrics JSONB table.
-			// For now, write a router metric with session info attached.
-			_ = snap // PPPoE snapshot is reflected via the router metrics and scenario alerts
+			_ = snap // Session counts are surfaced through scenario alerts, not stored directly here
 		}
 
 		// --- Update last_polled_at ---
