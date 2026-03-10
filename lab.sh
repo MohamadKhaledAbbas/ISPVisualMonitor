@@ -138,6 +138,62 @@ _separator() {
   echo -e "  ${C_DIM}──────────────────────────────────────${C_RESET}"
 }
 
+_default_db_host() {
+  if [[ -n "${DB_HOST:-}" ]]; then
+    echo "$DB_HOST"
+  elif command -v nc &>/dev/null && nc -z postgres 5432 &>/dev/null; then
+    echo "postgres"
+  elif command -v ping &>/dev/null && ping -c 1 postgres &>/dev/null; then
+    echo "postgres"
+  else
+    echo "localhost"
+  fi
+}
+
+_prompt_db_target() {
+  local default_host default_port host_input port_input
+  default_host="$(_default_db_host)"
+  default_port="${DB_PORT:-5432}"
+
+  echo -ne "${C_WHITE}  Database host (default ${default_host}): ${C_RESET}"
+  read -r host_input
+  echo -ne "${C_WHITE}  Database port (default ${default_port}): ${C_RESET}"
+  read -r port_input
+
+  DEMO_DB_HOST="${host_input:-$default_host}"
+  DEMO_DB_PORT="${port_input:-$default_port}"
+}
+
+_pick_demo_scenario() {
+  local scenarios=(
+    healthy
+    router-offline
+    core-congestion
+    upstream-failure
+    packet-loss
+    high-sessions
+  )
+  local descriptions=(
+    "reset to healthy baseline"
+    "simulate one router outage"
+    "simulate core uplink congestion"
+    "simulate provider failure"
+    "simulate uplink errors"
+    "simulate PPPoE session surge"
+  )
+
+  echo >&2
+  for i in "${!scenarios[@]}"; do
+    _menu_item "$((i+1))" "${scenarios[$i]}" "${descriptions[$i]}" >&2
+  done
+  _separator >&2
+
+  local choice
+  choice="$(_pick_number "Pick scenario" "${#scenarios[@]}")"
+  [[ -z "$choice" ]] && echo "" && return
+  echo "${scenarios[$((choice-1))]}"
+}
+
 _router_badge() {
   local key="$1"
   echo -e "  ${C_BOLD}Router:${C_RESET} ${C_MAGENTA}${R_NAME[$key]}${C_RESET}  container=${C_CYAN}${R_CONTAINER[$key]}${C_RESET}  ssh=:${R_SSH_PORT[$key]}  api=:${R_API_PORT[$key]}  webfig=:${R_WEBFIG_PORT[$key]}"
@@ -701,7 +757,81 @@ _drill_full_chaos() {
 }
 
 # =============================================================================
-#  SECTION 4 — Backend Management
+#  SECTION 4 — Demo Scripts
+# =============================================================================
+_demo_scripts() {
+  while true; do
+    _header
+    _section "Demo Scripts"
+
+    _menu_item 1 "Demo: Start"                 "run scripts/dev-start.sh"
+    _menu_item 2 "Demo: Start (devcontainer)"  "run scripts/devcontainer-start.sh"
+    _menu_item 3 "Demo: Stop"                  "run scripts/dev-stop.sh"
+    _separator
+    _menu_item 4 "Demo: Seed Data"             "run scripts/demo-seed.sh"
+    _menu_item 5 "Demo: Reset Data"            "run scripts/demo-reset.sh"
+    _menu_item 6 "Demo: Scenario Picker"       "run scripts/demo-scenarios.sh"
+    _menu_item 7 "Demo: Healthy Baseline"      "quick reset to healthy state"
+    _menu_item 8 "Demo: Show Scenario Help"    "print available scenarios"
+    _separator
+    _menu_item 0 "Back"
+
+    local c
+    c="$(_pick_number "Choice" 8)"
+    [[ -z "$c" ]] && return
+
+    _header
+    case "$c" in
+      1)
+        _section "Demo: Start"
+        bash "$SCRIPT_DIR/scripts/dev-start.sh"
+        ;;
+      2)
+        _section "Demo: Start (devcontainer)"
+        bash "$SCRIPT_DIR/scripts/devcontainer-start.sh"
+        ;;
+      3)
+        _section "Demo: Stop"
+        bash "$SCRIPT_DIR/scripts/dev-stop.sh"
+        ;;
+      4)
+        _section "Demo: Seed Data"
+        _prompt_db_target
+        _info "Loading demo seed data into ${DEMO_DB_HOST}:${DEMO_DB_PORT}"
+        bash "$SCRIPT_DIR/scripts/demo-seed.sh" --host "$DEMO_DB_HOST" --port "$DEMO_DB_PORT"
+        ;;
+      5)
+        _section "Demo: Reset Data"
+        _prompt_db_target
+        _warn "This runs the full demo reset script against ${DEMO_DB_HOST}:${DEMO_DB_PORT}."
+        bash "$SCRIPT_DIR/scripts/demo-reset.sh" --host "$DEMO_DB_HOST" --port "$DEMO_DB_PORT"
+        ;;
+      6)
+        _section "Demo: Scenario Picker"
+        local scenario
+        scenario="$(_pick_demo_scenario)"
+        [[ -z "$scenario" ]] && continue
+        _prompt_db_target
+        _info "Applying scenario '${scenario}' to ${DEMO_DB_HOST}:${DEMO_DB_PORT}"
+        bash "$SCRIPT_DIR/scripts/demo-scenarios.sh" "$scenario" --host "$DEMO_DB_HOST" --port "$DEMO_DB_PORT"
+        ;;
+      7)
+        _section "Demo: Healthy Baseline"
+        _prompt_db_target
+        _info "Resetting demo state to healthy baseline on ${DEMO_DB_HOST}:${DEMO_DB_PORT}"
+        bash "$SCRIPT_DIR/scripts/demo-scenarios.sh" healthy --host "$DEMO_DB_HOST" --port "$DEMO_DB_PORT"
+        ;;
+      8)
+        _section "Demo: Scenario Help"
+        bash "$SCRIPT_DIR/scripts/demo-scenarios.sh"
+        ;;
+    esac
+    _pause
+  done
+}
+
+# =============================================================================
+#  SECTION 5 — Backend Management
 # =============================================================================
 _backend() {
   while true; do
@@ -800,7 +930,7 @@ _backend() {
 }
 
 # =============================================================================
-#  SECTION 5 — Connectivity Checks
+#  SECTION 6 — Connectivity Checks
 # =============================================================================
 _checks() {
   while true; do
@@ -881,7 +1011,7 @@ _checks() {
 }
 
 # =============================================================================
-#  SECTION 6 — Settings / Mode Switch
+#  SECTION 7 — Settings / Mode Switch
 # =============================================================================
 _settings() {
   while true; do
@@ -930,23 +1060,25 @@ _main() {
     _menu_item 1 "CHR Lab Control"      "start/stop/reset lab, per-router ops"
     _menu_item 2 "Router Inspect"       "health, interfaces, PPPoE, DHCP"
     _menu_item 3 "Simulate & Scenarios" "failure drills, PPPoE churn, chaos"
-    _menu_item 4 "Backend Services"     "API, Docker, DB, logs, build, test"
-    _menu_item 5 "Connectivity Checks"  "port probes, wait-ready, port map"
+    _menu_item 4 "Demo Scripts"         "seed/reset/start/stop/demo scenarios"
+    _menu_item 5 "Backend Services"     "API, Docker, DB, logs, build, test"
+    _menu_item 6 "Connectivity Checks"  "port probes, wait-ready, port map"
     _separator
-    _menu_item 6 "Settings / Lab Mode"  "switch dev↔full, set credentials"
+    _menu_item 7 "Settings / Lab Mode"  "switch dev↔full, set credentials"
     _separator
     _menu_item 0 "Quit"
 
     echo
     local c
-    c="$(_pick_number "Choose" 6)"
+    c="$(_pick_number "Choose" 7)"
     case "$c" in
       1) _lab_control ;;
       2) _router_inspect ;;
       3) _simulate ;;
-      4) _backend ;;
-      5) _checks ;;
-      6) _settings ;;
+      4) _demo_scripts ;;
+      5) _backend ;;
+      6) _checks ;;
+      7) _settings ;;
       "") return 0 ;;
     esac
   done
@@ -958,6 +1090,7 @@ case "${1:-}" in
   lab)      _lab_control ;;
   inspect)  _router_inspect ;;
   sim|simulate) _simulate ;;
+  demo)     _demo_scripts ;;
   backend)  _backend ;;
   check|checks) _checks ;;
   *) _main ;;

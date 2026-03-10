@@ -14,7 +14,22 @@
 
 set -euo pipefail
 
-DB_HOST="${DB_HOST:-localhost}"
+# Auto-detect database host
+if [[ -n "${DB_HOST:-}" ]]; then
+  # Use explicitly set DB_HOST
+  :
+elif ping -c 1 postgres >/dev/null 2>&1; then
+  # In Docker network, postgres hostname is resolvable
+  DB_HOST="postgres"
+elif nc -z postgres 5432 >/dev/null 2>&1; then
+  # Postgres hostname exists and port is open
+  DB_HOST="postgres"
+else
+  # Default to localhost
+  DB_HOST="localhost"
+fi
+
+DB_HOST="${DB_HOST}"
 DB_PORT="${DB_PORT:-5432}"
 DB_USER="${DB_USER:-ispmonitor}"
 DB_PASSWORD="${DB_PASSWORD:-ispmonitor}"
@@ -55,6 +70,16 @@ print_usage() {
 
 run_psql_stdin() {
   if command -v psql >/dev/null 2>&1; then
+    if ! psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c '\q' 2>/dev/null; then
+      echo "ERROR: Cannot connect to PostgreSQL at $DB_HOST:$DB_PORT"
+      echo ""
+      echo "Troubleshooting:"
+      echo "  1. Start services with: make docker-up  or  make demo-start"
+      echo "  2. Check if postgres is running: docker ps | grep postgres"
+      echo "  3. Set DB_HOST if needed: export DB_HOST=postgres"
+      echo ""
+      exit 1
+    fi
     psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
   elif command -v docker-compose >/dev/null 2>&1; then
     echo "Local psql not found; using docker-compose exec postgres psql..."
@@ -70,7 +95,8 @@ run_psql_stdin() {
       psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
   else
     echo "ERROR: Neither local 'psql' nor Docker Compose is available."
-    echo "Install postgresql-client, or run with Docker Compose available."
+    echo "Install postgresql-client with: sudo apk add postgresql-client"
+    echo "  (or sudo apt-get install postgresql-client on Debian/Ubuntu)"
     exit 127
   fi
 }

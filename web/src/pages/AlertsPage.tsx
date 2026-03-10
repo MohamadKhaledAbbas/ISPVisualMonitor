@@ -106,7 +106,7 @@ export function AlertsPage() {
   const [alertToAck, setAlertToAck] = useState<Alert | null>(null);
   const [ackNote, setAckNote] = useState('');
 
-  // In production, fetch from API
+  // Fetch from API
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['alerts', { page, severity: severityFilter, status: statusFilter }],
     queryFn: () =>
@@ -116,7 +116,8 @@ export function AlertsPage() {
         severity: severityFilter as AlertSeverity || undefined,
         status: statusFilter as AlertStatus || undefined,
       }),
-    enabled: false, // Using mock data
+    enabled: true, // Fetch from backend API
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   // Filter mock data

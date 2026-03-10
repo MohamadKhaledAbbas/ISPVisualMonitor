@@ -115,14 +115,24 @@ const mockTopRouters: Router[] = [
 ];
 
 export function DashboardPage() {
-  // In production, fetch from API
-  const { data: stats } = useQuery({
+  // Fetch from API
+  const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => metricsApi.getDashboardStats(),
-    enabled: false, // Using mock data for now
+    enabled: true, // Fetch from backend API
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   const dashboardStats = stats || mockStats;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <div className="text-gray-500 dark:text-gray-400">Loading dashboard data...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

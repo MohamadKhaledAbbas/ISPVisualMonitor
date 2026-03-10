@@ -10,6 +10,24 @@ echo "========================================"
 
 cd /workspace
 
+# 0. Install system dependencies (PostgreSQL client)
+echo "[0/5] Installing system dependencies..."
+if command -v apk >/dev/null 2>&1; then
+  # Alpine Linux
+  sudo apk add --no-cache postgresql-client
+elif command -v apt-get >/dev/null 2>&1; then
+  # Debian/Ubuntu
+  if ! sudo apt-get update -qq; then
+    echo "  apt update failed; retrying without Yarn repo..."
+    if [ -f /etc/apt/sources.list.d/yarn.list ]; then
+      sudo mv /etc/apt/sources.list.d/yarn.list /etc/apt/sources.list.d/yarn.list.disabled
+    fi
+    sudo apt-get update -qq
+  fi
+  sudo apt-get install -y -qq postgresql-client
+fi
+echo "  PostgreSQL client installed."
+
 # 1. Install Go dependencies
 echo "[1/5] Installing Go dependencies..."
 go mod download

@@ -112,11 +112,12 @@ export function RoutersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [routerToDelete, setRouterToDelete] = useState<string | null>(null);
 
-  // In production, fetch from API
+  // Fetch from API
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['routers', { page, search, status: statusFilter }],
     queryFn: () => routersApi.list({ page, page_size: 20, search, status: statusFilter }),
-    enabled: false, // Using mock data
+    enabled: true, // Fetch from backend API
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   // Filter mock data

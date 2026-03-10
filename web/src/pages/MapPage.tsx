@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import maplibregl, { Map, Marker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Card, Badge, Button } from '@/components/common';
 import { cn, formatBps } from '@/utils';
+import { topologyApi, routersApi, alertsApi } from '@/api';
 import {
   EyeIcon,
   EyeSlashIcon,
@@ -249,7 +251,38 @@ export function MapPage() {
   const [tick, setTick] = useState(Date.now());
   const [spinning, setSpinning] = useState(false);
 
-  const sim = useMemo(() => generateSimulationData(), [tick]);
+  // Fetch topology and routers from API
+  const { data: topologyData, isLoading: topologyLoading } = useQuery({
+    queryKey: ['topology'],
+    queryFn: () => topologyApi.getTopology(),
+    enabled: true,
+    staleTime: 1000 * 60, // 1 minute
+  });
+
+  const { data: routersPageData, isLoading: routersLoading } = useQuery({
+    queryKey: ['routers', 'all'],
+    queryFn: () => routersApi.list({ page: 1, page_size: 100 }),
+    enabled: true,
+    staleTime: 1000 * 60, // 1 minute
+  });
+
+  const { data: alertsPageData, isLoading: alertsLoading } = useQuery({
+    queryKey: ['alerts', 'all'],
+    queryFn: () => alertsApi.list({ page: 1, page_size: 100 }),
+    enabled: true,
+    staleTime: 1000 * 30, // 30 seconds
+  });
+
+  // Use API data or fallback to simulation
+  const sim = useMemo(() => {
+    if (topologyData) {
+      // Build sim from real topology data
+      const sim = topologyData;
+      return sim;
+    }
+    return generateSimulationData();
+  }, [topologyData, tick]);
+
   const totalUsers = sim.users.length;
   const critAlerts = sim.alerts.filter(a => a.severity === 'critical').length;
   const bwIn = sim.routers.reduce((s, r) => s + r.bandwidth_in, 0);

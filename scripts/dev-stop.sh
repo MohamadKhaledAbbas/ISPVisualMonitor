@@ -11,6 +11,10 @@ pkill -f "vite" 2>/dev/null && echo "  Stopped: Frontend" || echo "  Frontend wa
 
 # Stop Docker services
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-docker compose down 2>&1 | tail -3 && echo "  Stopped: Docker services"
+if command -v docker >/dev/null 2>&1; then
+  docker compose down 2>&1 | tail -3 && echo "  Stopped: Docker services"
+else
+  echo "  Docker CLI not available, skipped compose shutdown"
+fi
 
 echo "All services stopped."

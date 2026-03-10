@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, Button, Select } from '@/components/common';
 import type { TimeRange } from '@/types';
 import { formatBps, formatPercentage, downloadFile } from '@/utils';
@@ -16,6 +17,7 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { metricsApi } from '@/api';
 
 // Mock data generators
 const generateTrafficData = (hours: number) => {
@@ -92,8 +94,46 @@ export function MetricsPage() {
   };
 
   const hours = getHoursFromRange(timeRange);
-  const trafficData = generateTrafficData(Math.min(hours, 48));
-  const systemData = generateSystemData(Math.min(hours, 48));
+
+  // Fetch metrics from API
+  const { data: trafficResponse, isLoading: trafficLoading } = useQuery({
+    queryKey: ['metrics', 'traffic', timeRange],
+    queryFn: () =>
+      metricsApi.getNetworkTraffic({
+        from: new Date(Date.now() - hours * 3600000).toISOString(),
+        to: new Date().toISOString(),
+      }),
+    enabled: true,
+    staleTime: 1000 * 60, // 1 minute
+  });
+
+  // Fallback to mock data
+  const mockTrafficData = Array.from({ length: Math.min(hours, 48) }, (_, i) => ({
+    time: format(new Date(Date.now() - (Math.min(hours, 48) - 1 - i) * 3600000), 'HH:mm'),
+    in_bps: Math.random() * 8000000000 + 2000000000,
+    out_bps: Math.random() * 4000000000 + 1000000000,
+  }));
+
+  const mockSystemData = Array.from({ length: Math.min(hours, 48) }, (_, i) => ({
+    time: format(new Date(Date.now() - (Math.min(hours, 48) - 1 - i) * 3600000), 'HH:mm'),
+    cpu: Math.random() * 40 + 30,
+    memory: Math.random() * 20 + 60,
+    temperature: Math.random() * 15 + 45,
+  }));
+
+  const trafficData = trafficResponse?.in_bps
+    ? [
+        ...trafficResponse.in_bps.map((point: any, idx: number) => ({
+          time: trafficResponse.in_bps[idx]?.timestamp
+            ? format(new Date(trafficResponse.in_bps[idx].timestamp), 'HH:mm')
+            : '',
+          in_bps: point.value,
+          out_bps: trafficResponse.out_bps?.[idx]?.value || 0,
+        })),
+      ]
+    : mockTrafficData;
+
+  const systemData = mockSystemData;
 
   const handleExport = async () => {
     // Create CSV content

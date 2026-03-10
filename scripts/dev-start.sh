@@ -18,6 +18,12 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+if ! command -v docker >/dev/null 2>&1; then
+  echo -e "${YELLOW}Docker CLI not found in this container.${NC}"
+  echo "Falling back to devcontainer startup mode..."
+  exec bash "$SCRIPT_DIR/devcontainer-start.sh"
+fi
+
 # Step 1: Start infrastructure via Docker
 echo -e "${YELLOW}[1/4] Starting infrastructure (PostgreSQL, Redis, Prometheus, Grafana)...${NC}"
 cd "$PROJECT_DIR"

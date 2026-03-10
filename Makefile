@@ -207,13 +207,19 @@ demo-scenarios:
 demo-start:
 	@echo "Starting ISP Visual Monitor in demo mode..."
 	@echo ""
-	APP_MODE=demo ENABLE_SIMULATOR=true ENABLE_REAL_AGENT=false USE_SEED_DATA=true BYPASS_LICENSE=true \
-		bash scripts/dev-start.sh
-	@echo ""
-	@echo "Loading demo seed data..."
-	@bash scripts/demo-seed.sh || echo "  Note: seed data may already be loaded or DB is still starting."
-	@echo ""
-	@echo "Demo mode is running. See docs/DEMO.md for details."
+	@if [ -n "$$CODESPACES" ] || [ -n "$$REMOTE_CONTAINERS" ]; then \
+		echo "Detected devcontainer/Codespaces environment..."; \
+		APP_MODE=demo ENABLE_SIMULATOR=true ENABLE_REAL_AGENT=false USE_SEED_DATA=true BYPASS_LICENSE=true \
+			bash scripts/devcontainer-start.sh; \
+	else \
+		APP_MODE=demo ENABLE_SIMULATOR=true ENABLE_REAL_AGENT=false USE_SEED_DATA=true BYPASS_LICENSE=true \
+			bash scripts/dev-start.sh; \
+		echo ""; \
+		echo "Loading demo seed data..."; \
+		bash scripts/demo-seed.sh || echo "  Note: seed data may already be loaded or DB is still starting."; \
+		echo ""; \
+		echo "Demo mode is running. See docs/DEMO.md for details."; \
+	fi
 
 demo-stop:
 	@echo "Stopping demo environment..."

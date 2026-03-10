@@ -1,31 +1,19 @@
-version: '3.8'
-
-# Production Docker Compose configuration
-# Use with: docker-compose -f docker-compose.prod.yml up -d
+# Single-node production Docker Compose baseline.
+# For HA production, use the Kubernetes manifests under deploy/k8s.
 
 services:
   api:
     image: ghcr.io/mohamadkhaledabbas/ispvisualmonitor:${VERSION:-latest}
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
+    pull_policy: always
+    init: true
+    restart: unless-stopped
     environment:
       - DEPLOYMENT_MODE=production
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - LICENSE_SERVER_URL=${LICENSE_SERVER_URL}
-      - LICENSE_KEY=${LICENSE_KEY}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=${REDIS_URL:?REDIS_URL is required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - LICENSE_SERVER_URL=${LICENSE_SERVER_URL:-}
+      - LICENSE_KEY=${LICENSE_KEY:-}
       - ENABLE_METRICS=true
       - LOG_LEVEL=info
       - LOG_FORMAT=json
@@ -47,24 +35,20 @@ services:
 
   poller:
     image: ghcr.io/mohamadkhaledabbas/ispvisualmonitor:${VERSION:-latest}
+    pull_policy: always
+    init: true
+    restart: unless-stopped
     command: ["./ispmonitor", "--mode=poller"]
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
+    depends_on:
+      api:
+        condition: service_healthy
     environment:
       - DEPLOYMENT_MODE=production
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=${REDIS_URL:?REDIS_URL is required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - LICENSE_SERVER_URL=${LICENSE_SERVER_URL:-}
+      - LICENSE_KEY=${LICENSE_KEY:-}
       - POLLER_WORKERS=20
       - POLLER_CONCURRENT=100
     logging:
@@ -76,18 +60,22 @@ services:
       - ispmonitor
 
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: ghcr.io/mohamadkhaledabbas/ispvisualmonitor-web:${VERSION:-latest}
+    pull_policy: always
+    restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
-    volumes:
-      - ./docker/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./docker/ssl:/etc/nginx/ssl:ro
     depends_on:
-      - api
-    deploy:
-      restart_policy:
-        condition: on-failure
+      api:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - ispmonitor
 

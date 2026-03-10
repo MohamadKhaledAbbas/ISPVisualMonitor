@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   MagnifyingGlassIcon,
   ArrowPathIcon,
@@ -14,6 +15,7 @@ import type { PPPoESession, DHCPLease, NATConnection } from '@/types';
 import { formatBytes, formatDuration } from '@/utils';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import { cn } from '@/utils';
+import { sessionsApi } from '@/api';
 
 // Mock data
 const mockPPPoESessions: PPPoESession[] = [
@@ -124,8 +126,35 @@ const mockNATConnections: NATConnection[] = [
 export function SessionsPage() {
   const [search, setSearch] = useState('');
 
-  // Filter mock data based on search
-  const filteredPPPoE = mockPPPoESessions.filter(
+  // Fetch from API
+  const { data: pppoeData, isLoading: pppoeLoading } = useQuery({
+    queryKey: ['sessions', 'pppoe'],
+    queryFn: () => sessionsApi.listPPPoE({ page: 1, page_size: 100 }),
+    enabled: true, // Fetch from backend API
+    staleTime: 1000 * 30, // 30 seconds
+  });
+
+  const { data: dhcpData, isLoading: dhcpLoading } = useQuery({
+    queryKey: ['sessions', 'dhcp'],
+    queryFn: () => sessionsApi.listDHCP({ page: 1, page_size: 100 }),
+    enabled: true, // Fetch from backend API
+    staleTime: 1000 * 30, // 30 seconds
+  });
+
+  const { data: natData, isLoading: natLoading } = useQuery({
+    queryKey: ['sessions', 'nat'],
+    queryFn: () => sessionsApi.listNAT({ page: 1, page_size: 100 }),
+    enabled: true, // Fetch from backend API
+    staleTime: 1000 * 30, // 30 seconds
+  });
+
+  // Use API data, fallback to mock data
+  const pppoeList = pppoeData?.data || mockPPPoESessions;
+  const dhcpList = dhcpData?.data || mockDHCPLeases;
+  const natList = natData?.data || mockNATConnections;
+
+  // Filter data based on search
+  const filteredPPPoE = pppoeList.filter(
     (s) =>
       !search ||
       s.username.toLowerCase().includes(search.toLowerCase()) ||
@@ -133,7 +162,7 @@ export function SessionsPage() {
       s.mac_address.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredDHCP = mockDHCPLeases.filter(
+  const filteredDHCP = dhcpList.filter(
     (s) =>
       !search ||
       s.ip_address.includes(search) ||
@@ -141,7 +170,7 @@ export function SessionsPage() {
       s.hostname?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredNAT = mockNATConnections.filter(
+  const filteredNAT = natList.filter(
     (s) =>
       !search ||
       s.src_address.includes(search) ||
