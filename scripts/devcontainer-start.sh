@@ -54,7 +54,7 @@ find_service_host() {
 # Check if running in devcontainer
 if [ -z "$REMOTE_CONTAINERS" ] && [ -z "$CODESPACES" ]; then
   echo -e "${YELLOW}Warning: This script is designed for devcontainer environments${NC}"
-  echo "For local development, use: make demo-start"
+  echo "For local development, use: ./lab.sh"
   echo ""
 fi
 
@@ -220,5 +220,5 @@ echo "  Demo Login:"
 echo "    Email:    admin@demo.local"
 echo "    Password: demo123"
 echo ""
-echo "  Stop services: make demo-stop"
+echo "  Stop services: ./lab.sh"
 echo -e "${GREEN}========================================${NC}"

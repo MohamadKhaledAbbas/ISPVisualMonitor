@@ -74,7 +74,7 @@ run_psql_stdin() {
       echo "ERROR: Cannot connect to PostgreSQL at $DB_HOST:$DB_PORT"
       echo ""
       echo "Troubleshooting:"
-      echo "  1. Start services with: make docker-up  or  make demo-start"
+      echo "  1. Start services with: ./lab.sh"
       echo "  2. Check if postgres is running: docker ps | grep postgres"
       echo "  3. Set DB_HOST if needed: export DB_HOST=postgres"
       echo ""

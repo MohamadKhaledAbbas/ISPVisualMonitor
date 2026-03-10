@@ -5,12 +5,15 @@
 # =============================================================================
 set -uo pipefail
 
+export GOTOOLCHAIN="${GOTOOLCHAIN:-auto}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHR_SCRIPTS="$SCRIPT_DIR/chr-lab/scripts"
 CHR_CONFIGS="$SCRIPT_DIR/chr-lab/configs"
 CHR_DEV_COMPOSE="$SCRIPT_DIR/chr-lab/docker-compose.chr.dev.yml"
 CHR_FULL_COMPOSE="$SCRIPT_DIR/chr-lab/docker-compose.chr.yml"
 MAIN_COMPOSE="$SCRIPT_DIR/docker-compose.yml"
+BOOTSTRAP_SCRIPT="$SCRIPT_DIR/scripts/bootstrap-deps.sh"
 
 # ─── Colours ──────────────────────────────────────────────────────────────────
 C_RESET="\033[0m"
@@ -59,7 +62,23 @@ _compose_file() {
   fi
 }
 
-_compose() { COMPOSE_FILE="$(_compose_file)" docker compose -f "$(_compose_file)" "$@"; }
+_compose() {
+  local compose_file
+  compose_file="$(_compose_file)"
+
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    COMPOSE_FILE="$compose_file" docker compose -f "$compose_file" "$@"
+    return
+  fi
+
+  if command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE_FILE="$compose_file" docker-compose -f "$compose_file" "$@"
+    return
+  fi
+
+  _err "Docker Compose is not available. Run the bootstrap menu first."
+  return 1
+}
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 _header() {
@@ -120,7 +139,7 @@ _run_ros_cmd() {
   local pass="${ROUTER_PASS:-admin}"
 
   if ! command -v sshpass &>/dev/null; then
-    _warn "sshpass not found. Install: sudo apt install -y sshpass"
+    _warn "sshpass not found. Run the bootstrap menu first."
     return 1
   fi
   echo -e "  ${C_DIM}→ SSH to ${R_CONTAINER[$key]} (port $port): $cmd${C_RESET}"
@@ -136,6 +155,176 @@ _menu_item() {
 
 _separator() {
   echo -e "  ${C_DIM}──────────────────────────────────────${C_RESET}"
+}
+
+_run_bootstrap() {
+  local title="$1"
+  shift
+
+  _header
+  _section "$title"
+
+  if [[ ! -x "$BOOTSTRAP_SCRIPT" ]]; then
+    _err "Bootstrap script missing or not executable: $BOOTSTRAP_SCRIPT"
+    return 1
+  fi
+
+  bash "$BOOTSTRAP_SCRIPT" "$@"
+}
+
+_run_script() {
+  local script_path="$1"
+  shift || true
+
+  if [[ ! -f "$script_path" ]]; then
+    _err "Script not found: $script_path"
+    return 1
+  fi
+
+  bash "$script_path" "$@"
+}
+
+_bootstrap_menu() {
+  while true; do
+    _header
+    _section "Environment Bootstrap"
+
+    _menu_item 1 "Check Dependencies"         "audit required commands and packages"
+    _menu_item 2 "Install All Dependencies"   "system packages + Go modules + Node packages"
+    _menu_item 3 "Install App Dependencies"   "skip Docker CLI packages"
+    _menu_item 4 "Refresh Frontend Packages"  "force reinstall from web/package.json"
+    _separator
+    _menu_item 0 "Back"
+
+    local c
+    c="$(_pick_number "Choice" 4)"
+    [[ -z "$c" ]] && return
+
+    case "$c" in
+      1)
+        if _run_bootstrap "Check Dependencies" --check; then
+          _ok "All tracked dependencies are available."
+        else
+          _warn "Some tracked dependencies are missing. Run 'Install All Dependencies'."
+        fi
+        ;;
+      2)
+        _run_bootstrap "Install All Dependencies"
+        ;;
+      3)
+        _run_bootstrap "Install App Dependencies" --skip-docker
+        ;;
+      4)
+        _run_bootstrap "Refresh Frontend Packages" --skip-docker --refresh-node
+        ;;
+    esac
+
+    _pause
+  done
+}
+
+_chr_script_menu() {
+  while true; do
+    _header
+    _section "CHR Script Wrappers"
+
+    _menu_item 1  "Compose Up"           "run chr-lab/scripts/up.sh"
+    _menu_item 2  "Compose Start"        "run chr-lab/scripts/start.sh"
+    _menu_item 3  "Compose Stop"         "run chr-lab/scripts/stop.sh"
+    _menu_item 4  "Compose Down"         "run chr-lab/scripts/down.sh"
+    _menu_item 5  "Compose Reset"        "run chr-lab/scripts/reset.sh"
+    _menu_item 6  "Compose Status"       "run chr-lab/scripts/status.sh"
+    _menu_item 7  "Compose Logs"         "run chr-lab/scripts/logs.sh"
+    _separator
+    _menu_item 8  "Show Health"          "run chr-lab/scripts/show-health.sh"
+    _menu_item 9  "Show Interfaces"      "run chr-lab/scripts/show-interfaces.sh"
+    _menu_item 10 "Show Network"         "run chr-lab/scripts/show-net.sh"
+    _menu_item 11 "Show PPPoE"           "run chr-lab/scripts/show-pppoe.sh"
+    _menu_item 12 "Show DHCP"            "run chr-lab/scripts/show-dhcp.sh"
+    _menu_item 13 "Show Services"        "run chr-lab/scripts/show-services.sh"
+    _menu_item 14 "Ports Check"          "run chr-lab/scripts/ports-check.sh"
+    _menu_item 15 "Wait Ready"           "run chr-lab/scripts/wait-ready.sh"
+    _menu_item 16 "Dev Check"            "run chr-lab/scripts/dev-check.sh"
+    _menu_item 17 "Winbox Info"          "run chr-lab/scripts/winbox-info.sh"
+    _menu_item 18 "Export Config"        "run chr-lab/scripts/export-config.sh"
+    _separator
+    _menu_item 0  "Back"
+
+    local c service
+    c="$(_pick_number "Choice" 18)"
+    [[ -z "$c" ]] && return
+
+    _header
+    _section "CHR Script Wrappers"
+    export COMPOSE_FILE="$(_compose_file)"
+
+    case "$c" in
+      1) _run_script "$CHR_SCRIPTS/up.sh" ;;
+      2) _run_script "$CHR_SCRIPTS/start.sh" ;;
+      3) _run_script "$CHR_SCRIPTS/stop.sh" ;;
+      4) _run_script "$CHR_SCRIPTS/down.sh" ;;
+      5) _run_script "$CHR_SCRIPTS/reset.sh" ;;
+      6) _run_script "$CHR_SCRIPTS/status.sh" ;;
+      7)
+        echo -ne "${C_WHITE}  Service name (Enter=all): ${C_RESET}"
+        read -r service
+        _run_script "$CHR_SCRIPTS/logs.sh" "${service:-}"
+        ;;
+      8) _run_script "$CHR_SCRIPTS/show-health.sh" ;;
+      9) _run_script "$CHR_SCRIPTS/show-interfaces.sh" ;;
+      10) _run_script "$CHR_SCRIPTS/show-net.sh" ;;
+      11) _run_script "$CHR_SCRIPTS/show-pppoe.sh" ;;
+      12) _run_script "$CHR_SCRIPTS/show-dhcp.sh" ;;
+      13) _run_script "$CHR_SCRIPTS/show-services.sh" ;;
+      14) _run_script "$CHR_SCRIPTS/ports-check.sh" ;;
+      15) _run_script "$CHR_SCRIPTS/wait-ready.sh" ;;
+      16) _run_script "$CHR_SCRIPTS/dev-check.sh" ;;
+      17) _run_script "$CHR_SCRIPTS/winbox-info.sh" ;;
+      18) _run_script "$CHR_SCRIPTS/export-config.sh" ;;
+    esac
+
+    _pause
+  done
+}
+
+_repo_script_menu() {
+  while true; do
+    _header
+    _section "Repo Utility Scripts"
+
+    _menu_item 1 "Dev Setup"               "run deploy/scripts/setup-dev.sh"
+    _menu_item 2 "Prod Setup"              "run deploy/scripts/setup-prod.sh"
+    _menu_item 3 "Backup: Create"          "run deploy/scripts/backup.sh backup"
+    _menu_item 4 "Backup: List"            "run deploy/scripts/backup.sh list"
+    _menu_item 5 "Backup: Restore"         "run deploy/scripts/backup.sh restore"
+    _separator
+    _menu_item 6 "CHR Wait Lab"            "run scripts/chr/wait-lab.sh"
+    _menu_item 7 "CHR PPPoE Activity Sim"  "run scripts/chr/simulate-pppoe-activity.sh"
+    _separator
+    _menu_item 0 "Back"
+
+    local c restore_file
+    c="$(_pick_number "Choice" 7)"
+    [[ -z "$c" ]] && return
+
+    _header
+    _section "Repo Utility Scripts"
+    case "$c" in
+      1) _run_script "$SCRIPT_DIR/deploy/scripts/setup-dev.sh" ;;
+      2) _run_script "$SCRIPT_DIR/deploy/scripts/setup-prod.sh" ;;
+      3) _run_script "$SCRIPT_DIR/deploy/scripts/backup.sh" backup ;;
+      4) _run_script "$SCRIPT_DIR/deploy/scripts/backup.sh" list ;;
+      5)
+        echo -ne "${C_WHITE}  Backup file to restore: ${C_RESET}"
+        read -r restore_file
+        [[ -z "$restore_file" ]] || _run_script "$SCRIPT_DIR/deploy/scripts/backup.sh" restore "$restore_file"
+        ;;
+      6) _run_script "$SCRIPT_DIR/scripts/chr/wait-lab.sh" ;;
+      7) _run_script "$SCRIPT_DIR/scripts/chr/simulate-pppoe-activity.sh" ;;
+    esac
+
+    _pause
+  done
 }
 
 _default_db_host() {
@@ -854,14 +1043,16 @@ _backend() {
     _menu_item 11 "DB: Run Migrations"
     _menu_item 12 "DB: Load Test Data"       "db/examples/test_data.sql"
     _separator
-    _menu_item 13 "API: Build Binary"        "make build"
-    _menu_item 14 "API: Run Tests"           "make test"
+    _menu_item 13 "API: Build Binary"        "go build ./cmd/ispmonitor"
+    _menu_item 14 "API: Run Tests"           "go test ./..."
     _menu_item 15 "API: Health Check"        "curl /health + /ready"
+    _menu_item 16 "Go: Format"               "go fmt ./..."
+    _menu_item 17 "Go: Tidy Modules"         "go mod tidy"
     _separator
     _menu_item 0  "Back"
 
     local c
-    c="$(_pick_number "Choice" 15)"
+    c="$(_pick_number "Choice" 17)"
     [[ -z "$c" ]] && return
 
     _header
@@ -906,10 +1097,11 @@ _backend() {
           fi
           ;;
       13) _section "Building Go Binary"
-          cd "$SCRIPT_DIR" && make build
+          mkdir -p "$SCRIPT_DIR/bin"
+          cd "$SCRIPT_DIR" && CGO_ENABLED=0 go build -o bin/ispmonitor ./cmd/ispmonitor
           ;;
       14) _section "Running Tests"
-          cd "$SCRIPT_DIR" && make test
+          cd "$SCRIPT_DIR" && go test -v -race ./...
           ;;
       15) _section "API Health Check"
           local api_url="http://localhost:8080"
@@ -923,6 +1115,12 @@ _backend() {
               echo -e "${C_RED}HTTP $code${C_RESET}  (unreachable or error)"
             fi
           done
+          ;;
+      16) _section "Formatting Go Code"
+          cd "$SCRIPT_DIR" && go fmt ./...
+          ;;
+      17) _section "Tidying Go Modules"
+          cd "$SCRIPT_DIR" && go mod tidy
           ;;
     esac
     _pause
@@ -1057,28 +1255,34 @@ _main() {
     printf "  ${C_DIM}Lab mode: %s   Compose: %s${C_RESET}\n\n" \
       "$LAB_MODE" "$(basename "$(_compose_file)")"
 
-    _menu_item 1 "CHR Lab Control"      "start/stop/reset lab, per-router ops"
-    _menu_item 2 "Router Inspect"       "health, interfaces, PPPoE, DHCP"
-    _menu_item 3 "Simulate & Scenarios" "failure drills, PPPoE churn, chaos"
-    _menu_item 4 "Demo Scripts"         "seed/reset/start/stop/demo scenarios"
-    _menu_item 5 "Backend Services"     "API, Docker, DB, logs, build, test"
-    _menu_item 6 "Connectivity Checks"  "port probes, wait-ready, port map"
+    _menu_item 1 "Environment Bootstrap" "install and verify lab/app dependencies"
+    _menu_item 2 "CHR Lab Control"       "start/stop/reset lab, per-router ops"
+    _menu_item 3 "CHR Script Wrappers"   "direct access to chr-lab script entry points"
+    _menu_item 4 "Router Inspect"        "health, interfaces, PPPoE, DHCP"
+    _menu_item 5 "Simulate & Scenarios"  "failure drills, PPPoE churn, chaos"
+    _menu_item 6 "Demo Scripts"          "seed/reset/start/stop/demo scenarios"
+    _menu_item 7 "Backend Services"      "API, Docker, DB, logs, build, test"
+    _menu_item 8 "Connectivity Checks"   "port probes, wait-ready, port map"
     _separator
-    _menu_item 7 "Settings / Lab Mode"  "switch dev↔full, set credentials"
+    _menu_item 9 "Repo Utility Scripts"  "deploy/setup/backup/chr extra scripts"
+    _menu_item 10 "Settings / Lab Mode"  "switch dev↔full, set credentials"
     _separator
     _menu_item 0 "Quit"
 
     echo
     local c
-    c="$(_pick_number "Choose" 7)"
+    c="$(_pick_number "Choose" 10)"
     case "$c" in
-      1) _lab_control ;;
-      2) _router_inspect ;;
-      3) _simulate ;;
-      4) _demo_scripts ;;
-      5) _backend ;;
-      6) _checks ;;
-      7) _settings ;;
+      1) _bootstrap_menu ;;
+      2) _lab_control ;;
+      3) _chr_script_menu ;;
+      4) _router_inspect ;;
+      5) _simulate ;;
+      6) _demo_scripts ;;
+      7) _backend ;;
+      8) _checks ;;
+      9) _repo_script_menu ;;
+      10) _settings ;;
       "") return 0 ;;
     esac
   done
@@ -1087,11 +1291,14 @@ _main() {
 # ─── Entry Point ──────────────────────────────────────────────────────────────
 # Allow running a specific section directly: ./lab.sh simulate | backend | check
 case "${1:-}" in
+  bootstrap) _bootstrap_menu ;;
   lab)      _lab_control ;;
+  chr-scripts) _chr_script_menu ;;
   inspect)  _router_inspect ;;
   sim|simulate) _simulate ;;
   demo)     _demo_scripts ;;
   backend)  _backend ;;
+  repo-scripts) _repo_script_menu ;;
   check|checks) _checks ;;
   *) _main ;;
 esac

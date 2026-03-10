@@ -18,7 +18,7 @@ fi
 
 if ! command -v sshpass >/dev/null 2>&1; then
   echo "Missing dependency: sshpass" >&2
-  echo "Install: sudo apt update && sudo apt install -y sshpass" >&2
+  echo "Install with: bash scripts/bootstrap-deps.sh" >&2
   exit 1
 fi
 

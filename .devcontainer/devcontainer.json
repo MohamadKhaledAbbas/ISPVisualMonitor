@@ -1,22 +1,57 @@
 {
   "name": "ISPVisualMonitor",
-  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.devcontainer.yml"],
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "docker-compose.devcontainer.yml"
+  ],
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
-  "features": {
-    "ghcr.io/devcontainers/features/go:1": { "version": "1.22" },
-    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  "containerEnv": {
+    "GOTOOLCHAIN": "auto"
   },
-  "runServices": ["postgres", "redis"],
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.24"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "runServices": [
+    "postgres",
+    "redis"
+  ],
   "shutdownAction": "stopCompose",
-  "forwardPorts": [5173, 8080, 3000, 9090, 5432, 6379],
+  "forwardPorts": [
+    5173,
+    8080,
+    3000,
+    9090,
+    5432,
+    6379
+  ],
   "portsAttributes": {
-    "5173": { "label": "Frontend (Vite)", "onAutoForward": "openBrowser" },
-    "8080": { "label": "API Server" },
-    "3000": { "label": "Grafana" },
-    "9090": { "label": "Prometheus" },
-    "5432": { "label": "PostgreSQL", "onAutoForward": "ignore" },
-    "6379": { "label": "Redis", "onAutoForward": "ignore" }
+    "5173": {
+      "label": "Frontend (Vite)",
+      "onAutoForward": "openBrowser"
+    },
+    "8080": {
+      "label": "API Server"
+    },
+    "3000": {
+      "label": "Grafana"
+    },
+    "9090": {
+      "label": "Prometheus"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "ignore"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "ignore"
+    }
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {
