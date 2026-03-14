@@ -1,6 +1,8 @@
 services:
   devcontainer:
-    image: mcr.microsoft.com/devcontainers/go:1-1.22-bookworm
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
     volumes:
       - ..:/workspace:cached
     working_dir: /workspace
