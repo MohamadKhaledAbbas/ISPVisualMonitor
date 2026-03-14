@@ -11,6 +11,10 @@ _main_compose() {
 
 # ─── CLI Functions ────────────────────────────────────────────────────────────
 backend_start() {
+    if _in_devcontainer; then
+        _run_script "$PROJECT_DIR/scripts/devcontainer-start.sh"
+        return
+    fi
     _run_script "$PROJECT_DIR/scripts/dev-start.sh"
 }
 
@@ -36,6 +40,10 @@ backend_logs() {
 }
 
 backend_db_shell() {
+    if _in_devcontainer && _service_reachable postgres && ! compose_service_running "$MAIN_COMPOSE" postgres; then
+        PGPASSWORD="${DB_PASSWORD:-ispmonitor}" psql -h "${DB_HOST:-$(default_db_host)}" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME"
+        return
+    fi
     _main_compose exec postgres psql -U "$DB_USER" -d "$DB_NAME"
 }
 
@@ -43,8 +51,14 @@ backend_migrate() {
     local f
     for f in "$PROJECT_DIR/db/migrations/"*.sql; do
         log_info "Applying: $(basename "$f")"
-        _main_compose exec -T postgres \
-            psql -U "$DB_USER" -d "$DB_NAME" < "$f" && log_ok "OK" || log_error "Failed: $f"
+        if _in_devcontainer && _service_reachable postgres && ! compose_service_running "$MAIN_COMPOSE" postgres; then
+            PGPASSWORD="${DB_PASSWORD:-ispmonitor}" \
+                psql -h "${DB_HOST:-$(default_db_host)}" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -f "$f" \
+                && log_ok "OK" || log_error "Failed: $f"
+        else
+            _main_compose exec -T postgres \
+                psql -U "$DB_USER" -d "$DB_NAME" < "$f" && log_ok "OK" || log_error "Failed: $f"
+        fi
     done
 }
 
@@ -53,6 +67,12 @@ backend_test_data() {
     if [[ ! -f "$tf" ]]; then
         log_error "Test data file not found: $tf"
         return 1
+    fi
+    if _in_devcontainer && _service_reachable postgres && ! compose_service_running "$MAIN_COMPOSE" postgres; then
+        PGPASSWORD="${DB_PASSWORD:-ispmonitor}" \
+            psql -h "${DB_HOST:-$(default_db_host)}" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -f "$tf" \
+            && log_ok "Test data loaded" || log_error "Failed"
+        return
     fi
     _main_compose exec -T postgres \
         psql -U "$DB_USER" -d "$DB_NAME" < "$tf" && log_ok "Test data loaded" || log_error "Failed"

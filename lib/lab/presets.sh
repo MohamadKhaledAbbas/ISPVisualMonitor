@@ -22,7 +22,7 @@ preset_list() {
     echo
     echo -e "${C_BOLD}Available presets:${C_RESET}"
     echo
-    printf "  ${C_CYAN}%-18s${C_RESET} %s\n" "quickstart"    "bootstrap → lab up → wait → seed → health check"
+    printf "  ${C_CYAN}%-18s${C_RESET} %s\n" "quickstart"    "bootstrap → infra → migrate → lab → seed → API → health"
     printf "  ${C_CYAN}%-18s${C_RESET} %s\n" "demo-showtime" "infra up → seed → apply scenarios → open endpoints"
     printf "  ${C_CYAN}%-18s${C_RESET} %s\n" "chaos-suite"   "lab up → wait → full chaos drill → health report"
     printf "  ${C_CYAN}%-18s${C_RESET} %s\n" "full-reset"    "stop everything → wipe volumes → clean state"
@@ -35,41 +35,45 @@ preset_quickstart() {
     log_info "=== Preset: Quickstart ==="
     local step=1
 
-    log_info "[${step}/7] Checking dependencies..."
+    log_info "[${step}/8] Checking dependencies..."
     bootstrap_check || {
         log_warn "Some dependencies missing — attempting install..."
         bootstrap_all || { log_error "Bootstrap failed"; return 1; }
     }
     (( step++ ))
 
-    log_info "[${step}/7] Ensuring Docker daemon is running..."
+    log_info "[${step}/8] Ensuring Docker daemon is running..."
     docker_available || { log_error "Docker is required. Run: ./lab.sh run docker start"; return 1; }
     (( step++ ))
 
-    log_info "[${step}/7] Starting backend infrastructure..."
+    log_info "[${step}/8] Starting backend infrastructure..."
     backend_infra_up
     (( step++ ))
 
-    log_info "[${step}/7] Running database migrations..."
+    log_info "[${step}/8] Running database migrations..."
     backend_migrate
     (( step++ ))
 
-    log_info "[${step}/7] Starting CHR lab..."
+    log_info "[${step}/8] Starting CHR lab..."
     compose "$(lab_compose_file)" up -d
     (( step++ ))
 
-    log_info "[${step}/7] Seeding demo data..."
+    log_info "[${step}/8] Seeding demo data..."
     demo_seed
     (( step++ ))
 
-    log_info "[${step}/7] Checking health..."
+    log_info "[${step}/8] Starting backend API..."
+    backend_start
+    (( step++ ))
+
+    log_info "[${step}/8] Checking health..."
     backend_health
     check_ports
 
     log_ok "=== Quickstart complete ==="
     echo
     echo -e "  ${C_BOLD}Next steps:${C_RESET}"
-    echo "    ./lab.sh run backend start     # start API server"
+    echo "    ./lab.sh run backend start     # restart API/frontend if needed"
     echo "    ./lab.sh                        # interactive menu"
     echo "    ./lab.sh run demo scenario core-congestion"
 }
