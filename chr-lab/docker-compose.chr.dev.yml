@@ -1,17 +1,15 @@
-version: "3.8"
-
 services:
   chr-01:
     image: evilfreelancer/docker-routeros:latest
     container_name: chr-01
     hostname: chr-01
     ports:
-      - "8728:8728"       # API
-      - "8729:8729"       # API-SSL
-      - "2221:22"         # SSH
-      - "18081:80"        # WebFig
-      - "8291:8291"       # Winbox
-      - "161:161/udp"     # SNMP (optional)
+      - "8728:8728" # API
+      - "8729:8729" # API-SSL
+      - "2221:22" # SSH
+      - "18081:80" # WebFig
+      - "8291:8291" # Winbox
+      - "161:161/udp" # SNMP (optional)
     cap_add:
       - NET_ADMIN
       - NET_RAW

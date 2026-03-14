@@ -1,5 +1,4 @@
 # chr-lab/docker-compose.chr.yml
-version: '3.8'
 
 services:
   # Core Router
@@ -9,10 +8,10 @@ services:
     hostname: chr-core-01
     restart: unless-stopped
     ports:
-      - "18081:80"    # WebFig
-      - "8292:8291"   # Winbox
-      - "8728:8728"   # API
-      - "8722:22"     # SSH
+      - "18081:80" # WebFig
+      - "8292:8291" # Winbox
+      - "8728:8728" # API
+      - "8722:22" # SSH
       - "161:161/udp" # SNMP
     cap_add:
       - NET_ADMIN
@@ -34,10 +33,10 @@ services:
     hostname: chr-edge-01
     restart: unless-stopped
     ports:
-      - "18082:80"    # WebFig
-      - "8293:8291"   # Winbox
-      - "8729:8728"   # API
-      - "8723:22"     # SSH
+      - "18082:80" # WebFig
+      - "8293:8291" # Winbox
+      - "8729:8728" # API
+      - "8723:22" # SSH
       - "162:161/udp" # SNMP
     cap_add:
       - NET_ADMIN
@@ -59,10 +58,10 @@ services:
     hostname: chr-access-01
     restart: unless-stopped
     ports:
-      - "18083:80"    # WebFig
-      - "8294:8291"   # Winbox
-      - "8730:8728"   # API
-      - "8724:22"     # SSH
+      - "18083:80" # WebFig
+      - "8294:8291" # Winbox
+      - "8730:8728" # API
+      - "8724:22" # SSH
       - "163:161/udp" # SNMP
     cap_add:
       - NET_ADMIN
@@ -84,10 +83,10 @@ services:
     hostname: chr-pppoe-01
     restart: unless-stopped
     ports:
-      - "18084:80"    # WebFig
-      - "8295:8291"   # Winbox
-      - "8731:8728"   # API
-      - "8725:22"     # SSH
+      - "18084:80" # WebFig
+      - "8295:8291" # Winbox
+      - "8731:8728" # API
+      - "8725:22" # SSH
       - "164:161/udp" # SNMP
     cap_add:
       - NET_ADMIN

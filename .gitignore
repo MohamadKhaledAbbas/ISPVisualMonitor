@@ -48,8 +48,8 @@ logs/
 *.sqlite
 
 # Temporary files
-tmp/
-temp/
+tmp/  
+temp/  
 
 # Docker
 docker/ssl/
@@ -65,3 +65,8 @@ backups/
 
 # License cache
 license.cache
+
+ispmonitor
+
+
+to be delted...
