@@ -13,6 +13,7 @@ import (
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/api"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/database"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/poller"
+	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/internal/simulator"
 	"github.com/MohamadKhaledAbbas/ISPVisualMonitor/pkg/config"
 )
 
@@ -45,6 +46,19 @@ func main() {
 			log.Printf("Poller service error: %v", err)
 		}
 	}()
+
+	// Start simulator if enabled (demo / development mode)
+	deployCfg := config.LoadDeployment()
+	if deployCfg.EnableSimulator {
+		simCfg := simulator.DefaultConfig()
+		svc := simulator.NewService(db.DB, simCfg)
+		go func() {
+			log.Printf("Starting simulator: %s", svc)
+			if err := svc.Start(ctx); err != nil {
+				log.Printf("Simulator error: %v", err)
+			}
+		}()
+	}
 
 	// Initialize API server
 	apiServer := api.NewServer(db, cfg.API, cfg.Auth)

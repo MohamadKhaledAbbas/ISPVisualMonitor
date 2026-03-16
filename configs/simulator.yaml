@@ -1,0 +1,27 @@
+# ISP Visual Monitor — Simulator Configuration
+#
+# Copy this file to configs/simulator.yaml and adjust as needed.
+# Alternatively, set the equivalent SIM_* environment variables.
+#
+# This configuration is only used by the standalone simulator command:
+#   go run ./cmd/simulator
+#
+# When the simulator is started via the main app (ENABLE_SIMULATOR=true),
+# it uses the default configuration defined in internal/simulator/simulator.go.
+
+# Simulation mode:
+#   deterministic — fixed seed, repeatable output
+#   scenario      — active scenario with some jitter (default)
+#   random        — time-based seed, different every run
+mode: scenario
+
+# RNG seed (used in deterministic and scenario modes).
+seed: 42
+
+# How often to generate a new telemetry cycle (Go duration string).
+interval: 30s
+
+# Initial scenario to activate on startup.
+# Available: healthy, router-down, link-saturation, upstream-outage,
+#            packet-loss, session-spike, flapping-interface
+scenario: healthy
