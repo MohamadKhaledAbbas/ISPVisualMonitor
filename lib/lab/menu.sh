@@ -35,20 +35,34 @@ _menu_item() {
 _pause() {
     echo
     echo -e "${C_DIM}  Press Enter to continue...${C_RESET}"
-    read -r
+    _read_tty_line _unused
 }
 
 _confirm() {
     local msg="${1:-Are you sure?}"
     echo -e "${C_YELLOW}  ${msg} [y/N] ${C_RESET}"
-    read -r ans
+    local ans
+    _read_tty_line ans
     [[ "$ans" =~ ^[Yy]$ ]]
+}
+
+_read_tty_line() {
+    local __var_name="$1"
+    local __value=""
+
+    if [[ -r /dev/tty ]]; then
+        read -r __value </dev/tty || true
+    else
+        read -r __value || true
+    fi
+
+    printf -v "$__var_name" '%s' "$__value"
 }
 
 _pick_number() {
     local prompt="$1" max="$2" n
     echo -ne "${C_WHITE}  ${prompt} (1-${max}, 0=back): ${C_RESET}" >&2
-    read -r n </dev/tty
+    _read_tty_line n
     if [[ "$n" == "0" || -z "$n" ]]; then echo ""; return; fi
     if [[ "$n" =~ ^[0-9]+$ && "$n" -ge 1 && "$n" -le "$max" ]]; then
         echo "$n"
@@ -61,11 +75,11 @@ _pick_number() {
 _prompt_input() {
     local prompt="$1" default="${2:-}" value
     if [[ -n "$default" ]]; then
-        echo -ne "${C_WHITE}  ${prompt} (default: ${default}): ${C_RESET}"
+        echo -ne "${C_WHITE}  ${prompt} (default: ${default}): ${C_RESET}" >&2
     else
-        echo -ne "${C_WHITE}  ${prompt}: ${C_RESET}"
+        echo -ne "${C_WHITE}  ${prompt}: ${C_RESET}" >&2
     fi
-    read -r value
+    _read_tty_line value
     echo "${value:-$default}"
 }
 

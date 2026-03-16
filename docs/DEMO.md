@@ -23,7 +23,7 @@ production license, or an external agent.
    | Field    | Value                     |
    |----------|---------------------------|
    | Email    | `demo@lebanonnet.demo`    |
-   | Password | `Demo@12345`              |
+   | Password | `password`                |
 
 That's it — dashboard, map, alerts, and routers pages are populated.
 
@@ -73,7 +73,7 @@ The seed dataset (`db/seed/demo_seed.sql`) provides:
 | Entity         | Count | Details                                        |
 |----------------|------:|------------------------------------------------|
 | Tenant         |     1 | LebanonNet ISP                                 |
-| User           |     1 | demo@lebanonnet.demo / Demo@12345              |
+| User           |     1 | demo@lebanonnet.demo / password                |
 | Regions        |     3 | Beirut Metro, North Lebanon, South Lebanon     |
 | Sites (POPs)   |     3 | BEY-DC1, TRI-POP1, SID-POP1                   |
 | Routers        |    10 | core, edge, border/upstream, access, pppoe     |

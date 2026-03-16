@@ -72,6 +72,9 @@ preset_quickstart() {
 
     log_ok "=== Quickstart complete ==="
     echo
+    echo -e "  ${C_BOLD}Demo login:${C_RESET}"
+    echo "    demo@lebanonnet.demo / password"
+    echo
     echo -e "  ${C_BOLD}Next steps:${C_RESET}"
     echo "    ./lab.sh run backend start     # restart API/frontend if needed"
     echo "    ./lab.sh                        # interactive menu"
@@ -109,6 +112,9 @@ preset_demo_showtime() {
     check_ports
 
     log_ok "=== Demo Showtime ready ==="
+    echo
+    echo -e "  ${C_BOLD}Demo login:${C_RESET}"
+    echo "    demo@lebanonnet.demo / password"
     echo
     echo -e "  ${C_BOLD}Demo is live. Try some scenarios:${C_RESET}"
     echo "    ./lab.sh run demo scenario router-offline"

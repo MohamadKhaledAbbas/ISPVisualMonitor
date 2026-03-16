@@ -52,6 +52,7 @@ Domains and actions (./lab.sh run <domain> <action>):
   inspect   identity <key> | interfaces <key> | network <key>
             pppoe <key> | dhcp <key> | services <key> | custom <key> <cmd>
   checks    ports | wait-ready <key> | dev-check | port-map | ssh-probe <key>
+            forwarded | recover <service|all>
   preset    quickstart | demo-showtime | chaos-suite | full-reset
 
 Router keys:  dev  core  edge  acc  ppp
@@ -246,6 +247,8 @@ _cli_checks() {
         dev-check)   check_dev ;;
         port-map)    check_port_map ;;
         ssh-probe)   check_ssh_probe "$@" ;;
+        forwarded)   check_forwarded_ports ;;
+        recover)     check_recover_service "${1:-all}" ;;
         *) log_error "Unknown checks action: $action"; return 1 ;;
     esac
 }

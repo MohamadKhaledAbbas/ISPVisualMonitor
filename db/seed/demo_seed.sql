@@ -35,7 +35,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
--- 2. DEMO USER (password: Demo@12345 — bcrypt cost 10)
+-- 2. DEMO USER (password: password — bcrypt cost 10)
 -- ============================================================================
 INSERT INTO users (id, tenant_id, email, password_hash, first_name, last_name, status, email_verified)
 VALUES (
@@ -486,7 +486,7 @@ ON CONFLICT DO NOTHING;
 -- ============================================================================
 -- After running this seed:
 --   1 tenant   : LebanonNet ISP
---   1 user     : demo@lebanonnet.demo / Demo@12345
+--   1 user     : demo@lebanonnet.demo / password
 --   3 regions  : Beirut Metro, North Lebanon, South Lebanon
 --   3 POPs     : BEY-DC1, TRI-POP1, SID-POP1
 --   10 routers : 2 core, 1 edge, 1 upstream/border, 2 pppoe, 2 access, 2 edge (remote)

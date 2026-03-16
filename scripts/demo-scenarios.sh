@@ -34,6 +34,7 @@ DB_PORT="${DB_PORT:-5432}"
 DB_USER="${DB_USER:-ispmonitor}"
 DB_PASSWORD="${DB_PASSWORD:-ispmonitor}"
 DB_NAME="${DB_NAME:-ispmonitor}"
+DB_CONNECT_TIMEOUT="${DB_CONNECT_TIMEOUT:-5}"
 
 DEMO_TENANT="a0000000-0000-0000-0000-000000000001"
 
@@ -49,6 +50,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 export PGPASSWORD="$DB_PASSWORD"
+export PGCONNECT_TIMEOUT="$DB_CONNECT_TIMEOUT"
+
+echo "Target DB: ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME} (connect timeout: ${DB_CONNECT_TIMEOUT}s)"
 
 print_usage() {
   echo "ISP Visual Monitor — Demo Scenarios"
@@ -80,19 +84,19 @@ run_psql_stdin() {
       echo ""
       exit 1
     fi
-    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+    psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
   elif command -v docker-compose >/dev/null 2>&1; then
     echo "Local psql not found; using docker-compose exec postgres psql..."
     docker-compose up -d postgres >/dev/null
     docker-compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
-    docker-compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
-      psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+    docker-compose exec -T -e PGPASSWORD="$DB_PASSWORD" -e PGCONNECT_TIMEOUT="$DB_CONNECT_TIMEOUT" postgres \
+      psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
   elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     echo "Local psql not found; using docker compose exec postgres psql..."
     docker compose up -d postgres >/dev/null
     docker compose exec -T postgres pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null
-    docker compose exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
-      psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
+    docker compose exec -T -e PGPASSWORD="$DB_PASSWORD" -e PGCONNECT_TIMEOUT="$DB_CONNECT_TIMEOUT" postgres \
+      psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f -
   else
     echo "ERROR: Neither local 'psql' nor Docker Compose is available."
     echo "Install postgresql-client with: sudo apk add postgresql-client"

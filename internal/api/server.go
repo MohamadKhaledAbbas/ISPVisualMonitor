@@ -115,7 +115,11 @@ func (s *Server) setupRoutes() {
 
 	// Health check endpoint (no auth required)
 	s.router.HandleFunc("/health", s.handleHealthCheck).Methods("GET")
+	s.router.HandleFunc("/ready", s.handleReadinessCheck).Methods("GET")
+	s.router.HandleFunc("/live", s.handleLivenessCheck).Methods("GET")
 	s.router.HandleFunc("/api/v1/health", s.handleHealthCheck).Methods("GET")
+	s.router.HandleFunc("/api/v1/ready", s.handleReadinessCheck).Methods("GET")
+	s.router.HandleFunc("/api/v1/live", s.handleLivenessCheck).Methods("GET")
 
 	// API v1 routes
 	api := s.router.PathPrefix("/api/v1").Subrouter()
@@ -185,7 +189,11 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 		"endpoints": map[string]interface{}{
 			"health": map[string]string{
 				"GET /health":        "Health check (no auth required)",
+				"GET /ready":         "Readiness probe (checks dependencies)",
+				"GET /live":          "Liveness probe (process alive)",
 				"GET /api/v1/health": "Health check v1 (no auth required)",
+				"GET /api/v1/ready":  "Readiness probe v1 (checks dependencies)",
+				"GET /api/v1/live":   "Liveness probe v1 (process alive)",
 			},
 			"auth": map[string]string{
 				"POST /api/v1/auth/login":    "User login (no auth required)",
@@ -223,6 +231,27 @@ func (s *Server) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondJSON(w, http.StatusOK, map[string]string{
 		"status":  "healthy",
+		"service": "isp-visual-monitor",
+	})
+}
+
+// handleReadinessCheck handles readiness probe requests
+func (s *Server) handleReadinessCheck(w http.ResponseWriter, r *http.Request) {
+	if err := s.db.Ping(); err != nil {
+		http.Error(w, "Database unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	utils.RespondJSON(w, http.StatusOK, map[string]string{
+		"status":  "ready",
+		"service": "isp-visual-monitor",
+	})
+}
+
+// handleLivenessCheck handles liveness probe requests
+func (s *Server) handleLivenessCheck(w http.ResponseWriter, r *http.Request) {
+	utils.RespondJSON(w, http.StatusOK, map[string]string{
+		"status":  "alive",
 		"service": "isp-visual-monitor",
 	})
 }
